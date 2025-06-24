@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import User from '../models/User.models';
 import { encrypt, compareValue } from '../helper/encrypt';
 import { generateJWTToken } from '../helper/jwt';
+import mailTemplateService from './email.template.service';
 import { IRegisterRequest, ILoginRequest, IAuthResponse } from '../types/auth.interface';
 import { JWTPayload } from '../types/common.interface';
 import { statusCode } from '../utils/statusCode';
@@ -68,17 +70,17 @@ class AuthService {
   }
 
   async login(loginData: ILoginRequest): Promise<IAuthResponse> {
-    try {
-      const { email, password } = loginData;
+      const { code, password } = loginData;
 
       // Find user by email
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ code });
+
       
       if (!user) {
         return {
           success: false,
           statusCode: statusCode.UNAUTHORIZED,
-          message: 'Invalid email or password'
+          message: 'Invalid code or password'
         };
       }
 
@@ -116,24 +118,71 @@ class AuthService {
         statusCode: statusCode.SUCCESS,
         message: 'Login successful',
         data: {
-          user: {
-            id: user._id.toString(),
-            name: user.name!,
-            email: user.email!,
-            role: user.role
-          },
           token
         }
       };
 
-    } catch (error) {
-      console.error('[AuthService] login error:', error);
+  }
+  
+  async forgotPassword(payload: { email: string, redirect_url?: string }) {
+      const { email, redirect_url } = payload;
+      const user = await User.findOne({ email });
+      console.log("user", user)
+
+      if (!user) {
+        return {
+          success: false,
+          statusCode: statusCode.BAD_REQUEST,
+          message: 'Email not found',
+        };
+      }
+
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      console.log("resetToken", resetToken)
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+      await user.save();
+
+      const mailBody = {
+        email: user.email || '',
+        name: user.name || '',
+        token: resetToken, 
+        redirect_url: redirect_url || '',
+      };
+      console.log("mailBody", mailBody)
+      await mailTemplateService.sendForgotPasswordMail(mailBody);
+
       return {
-        success: false,
-        statusCode: statusCode.SERVER_ERROR,
-        message: 'Login failed. Please try again.'
+        success: true,
+        statusCode: statusCode.SUCCESS,
+        message: 'Forgot password email sent successfully',
       };
     }
+
+  async resetPassword(payload: { token: string, newPassword: string }) {
+    const user = await User.findOne({
+      resetPasswordToken: payload.token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        statusCode: statusCode.BAD_REQUEST,
+        message: 'Invalid or expired reset token',
+      };
+    }
+
+    user.password = await encrypt(payload.newPassword);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return {
+      success: true,
+      statusCode: statusCode.SUCCESS,
+      message: 'Password reset successful',
+    };
   }
 }
 

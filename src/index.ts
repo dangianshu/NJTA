@@ -2,7 +2,7 @@ import express, { Application, Request, Response } from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import { CONFIG } from './config/env.config'
-// import route from './routes/index'
+import route from './routes/index'
 import { logUrl } from '../src/middlewares/url-logger.middleware'
 import { connectDB } from './config/db.config'
 import { globalErrorHandler } from './middlewares/global-error-handler.middleware'
@@ -29,7 +29,7 @@ app.use(express.json({ limit: '500mb' }))
 
 app.use(logUrl)
 
-// app.use('/api', route)
+app.use('/api', route)
 
 app.get('/status', (req: Request, res: Response) => {
   res.status(200).json({ message: 'Server is working properly!' })

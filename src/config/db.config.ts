@@ -8,7 +8,7 @@ import seedUsers from '../script/seedData';
 export const connectDB = async (): Promise<void> => {
   try {
     await mongoose.connect(CONFIG.DB.MONGO_URL);
-    seedUsers()
+    // seedUsers()
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);

@@ -22,11 +22,6 @@ export const registerValidation = Joi.object({
       'string.pattern.base': 'Password should contain at least 1 uppercase character and 1 special character'
     }),
   
-  password2: Joi.string().valid(Joi.ref('password')).required().messages({
-    'any.only': 'Passwords do not match',
-    'string.empty': 'Please confirm your password'
-  }),
-  
   contactName: Joi.string().min(2).max(50).required().messages({
     'string.empty': 'Contact name is required',
     'string.min': 'Contact name must be at least 2 characters',
@@ -39,9 +34,8 @@ export const registerValidation = Joi.object({
 });
 
 export const loginValidation = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.empty': 'Email is required',
-    'string.email': 'Please provide a valid email address'
+  code: Joi.string().required().messages({
+    'string.empty': 'Organization/Evaluator ID is required'
   }),
   
   password: Joi.string().required().messages({
