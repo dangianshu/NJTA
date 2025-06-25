@@ -6,7 +6,6 @@ import authService from '../services/auth.service'
 class AuthController {
   async login(req: Request, res: Response) {
     try {
-      console.log("---::", req)
       const result = await authService.login(req.body);
       
       if (!result.success) {
@@ -101,8 +100,9 @@ class AuthController {
 
   async resetPassword(req: Request, res: Response) {
   try {
-    const { token, newPassword } = req.body;
-    const result = await authService.resetPassword({ token, newPassword });
+    const { password } = req.body;
+    const token = req.query.token as string;
+    const result = await authService.resetPassword({ token, password });
 
     if (!result.success) {
       return responseData({

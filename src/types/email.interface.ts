@@ -11,3 +11,11 @@ export interface ISendForgotPassword {
   token: string
   redirect_url: string
 }
+
+export interface ISendInvitation {
+  name: string;
+  email: string;
+  code: string;
+  password: string;
+  redirect_url?: string;
+}

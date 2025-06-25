@@ -1,6 +1,7 @@
 import { sendMail } from '../helper/mail'
-import { ISendForgotPassword } from '../types/email.interface'
+import { ISendForgotPassword, ISendInvitation } from '../types/email.interface'
 import sendForgotPasswordTemplate from '../template/forgot_password.template'
+import sendInvitationTemplate from '../template/send_invitation.template'
 
 class MailTemplateService {
 
@@ -23,6 +24,25 @@ class MailTemplateService {
     } catch (error) {
       console.error('Failed to send email.', error)
       throw error
+    }
+  }
+
+  async sendInvitationMail(body: ISendInvitation) {
+  try {
+    const emailCheckData = {
+      to: body?.email,
+      subject: 'Invitation',
+      html: sendInvitationTemplate.sendInvitation(body),
+    }
+    const isMailSent = await sendMail(emailCheckData)
+    if (!isMailSent) {
+      console.error('Failed to send email.')
+      return isMailSent
+    }
+    return isMailSent
+   } catch (error) {
+    console.error('Failed to send email.', error)
+    throw error
     }
   }
 

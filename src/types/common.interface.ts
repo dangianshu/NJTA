@@ -2,8 +2,8 @@ import { Response } from 'express'
 
 export interface IPagination {
   limit: number
-  page_number: number
-  total_data?: number
+  page: number
+  total?: number
 }
 
 export interface IQueryPagination {
@@ -31,3 +31,4 @@ export interface JWTPayload {
   email: string;
   role: string;
 }
+

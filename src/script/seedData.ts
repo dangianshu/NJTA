@@ -60,8 +60,8 @@ export const seedUsers = async (): Promise<void> => {
       {
         name: 'New Jersey Theatre Alliance (Evaluator)',
         contact: 'Alex and Dani',
-        email: 'eval126@njta.org',
-        password: 'eval123', // Will be hashed by model
+        email: 'eval126@yopmail.com',
+        password: 'Testeval@123', // Will be hashed by model
         code: 'EVAL126',
         role: 'evaluator',
         isVerified: true,
@@ -70,8 +70,8 @@ export const seedUsers = async (): Promise<void> => {
       {
         name: 'Arts Council Evaluator',
         contact: 'Sarah Johnson',
-        email: 'eval127@njta.org',
-        password: 'eval123',
+        // email: 'eval127@njta.org',
+        // password: 'Testeval@123',
         code: 'EVAL127',
         role: 'evaluator',
         isVerified: true,
@@ -80,8 +80,8 @@ export const seedUsers = async (): Promise<void> => {
       {
         name: 'Cultural Assessment Team',
         contact: 'Michael Chen',
-        email: 'eval128@njta.org',
-        password: 'eval123',
+        // email: 'eval128@njta.org',
+        // password: 'Testeval@123',
         code: 'EVAL128',
         role: 'evaluator',
         isVerified: true,
@@ -90,8 +90,8 @@ export const seedUsers = async (): Promise<void> => {
       {
         name: 'Performance Review Board',
         contact: 'Lisa Martinez',
-        email: 'eval129@njta.org',
-        password: 'eval123',
+        email: 'eval129@yopmail.com',
+        password: 'Testeval@123',
         code: 'EVAL129',
         role: 'evaluator',
         isVerified: true,
@@ -105,35 +105,13 @@ export const seedUsers = async (): Promise<void> => {
         name: 'NJTA System Administrator',
         contact: 'IT Department',
         email: 'admin@njta.org',
-        password: 'admin123',
+        password: 'Admin@123',
         code: 'ADMIN001',
         role: 'admin',
         isVerified: true,
         isActive: true,
         submission: [],
-      },
-      {
-        name: 'Portal Administrator',
-        contact: 'Operations Team',
-        email: 'portaladmin@njta.org',
-        password: 'admin123',
-        code: 'ADMIN002',
-        role: 'admin',
-        isVerified: true,
-        isActive: true,
-        submission: [],
-      },
-      {
-        name: 'Super Admin',
-        contact: 'Management',
-        email: 'superadmin@njta.org',
-        password: 'admin123',
-        code: 'ADMIN003',
-        role: 'admin',
-        isVerified: true,
-        isActive: true,
-        submission: [],
-      },
+      }
     ]
 
     // Insert all users

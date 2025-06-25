@@ -8,7 +8,7 @@ export interface IUser extends Document {
   password?: string;
   code?: string;
   date: Date;
-  role: 'user' | 'admin';
+  role: string;
   submission?: ISubmission[];
   isVerified: boolean;
   resetPasswordToken?: string;

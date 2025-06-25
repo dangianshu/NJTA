@@ -5,7 +5,7 @@ import { NextFunction, Request, Response } from 'express';
 
 export const verifyResetToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.params;
+    const { token } = req.query
     if (!token || typeof token !== 'string') {
       return responseData({
         res,
@@ -41,3 +41,6 @@ export const verifyResetToken = async (req: Request, res: Response, next: NextFu
     });
   }
 };
+
+
+
