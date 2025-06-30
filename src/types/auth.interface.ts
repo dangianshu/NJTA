@@ -37,6 +37,7 @@ export interface IinvaiteRequest {
   email: string;
   contact: string;
   code: string;
+  redirectUrl?: string;
 }  
 
 export interface IUserPaginatedResponse {

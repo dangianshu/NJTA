@@ -17,5 +17,7 @@ export interface ISendInvitation {
   email: string;
   code: string;
   password: string;
-  redirect_url?: string;
+  redirectUrl?: string;
+  role: string
+  
 }

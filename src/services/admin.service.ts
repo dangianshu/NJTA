@@ -8,14 +8,14 @@ import {
   IServiceResponse,
   IUserPaginatedResponse,
 } from '../types/auth.interface'
-import { getRoleByCode } from '../helper/common'
+import { getRoleByCode, generateCustomPassword, getTypeByCode } from '../helper/common'
 import mailTemplateService from './email.template.service'
 import { IUser } from '../types/user.interface'
 import { IPagination } from '../types/common.interface'
 
 class AdminService {
   async createInvitation(userData: IinvaiteRequest): Promise<IAuthResponse> {
-    const { name, email, contact, code } = userData
+    const { name, email, contact, code, redirectUrl } = userData
     const existingUser = await User.findOne({ code })
 
     if (!existingUser) {
@@ -43,7 +43,7 @@ class AdminService {
       }
     }
     // Generate random password
-    const randomPassword = crypto.randomBytes(6).toString('base64')
+    const randomPassword = generateCustomPassword()
     const hashedPassword = await encrypt(randomPassword)
     const hashString = await encrypt(email)
 
@@ -56,6 +56,7 @@ class AdminService {
     existingUser.isVerified = true
 
     await existingUser.save()
+    const emailRole = getTypeByCode(code)
 
     // Send invitation email
     await mailTemplateService.sendInvitationMail({
@@ -63,6 +64,8 @@ class AdminService {
       name: existingUser.contact || '',
       code: existingUser.code || '',
       password: randomPassword,
+      redirectUrl: redirectUrl || '',
+      role: emailRole,
     })
 
     const userObj = existingUser.toObject()
@@ -120,7 +123,7 @@ class AdminService {
     type: string
   ): Promise<IServiceResponse<IUserPaginatedResponse>> {
     const { page = 1, limit = 10 } = pagination
-    const query: any = {}
+    const query: any = { email: { $ne: null } };
 
     if (type) {
       query.role = type
