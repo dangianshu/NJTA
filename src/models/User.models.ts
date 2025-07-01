@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import { IUser } from '../types/user.interface';
+import { UserRole } from '../utils/constante';
 
 
 const submissionSchema = new Schema({
@@ -32,19 +33,14 @@ const UserSchema = new Schema<IUser>({
   contact: {
     type: String,
     required: false,
-    trim: true,
   },
   email: {
     type: String,
     required: false, 
-    lowercase: true,
-    trim: true,
-    sparse: true,
   },
   password: {
     type: String,
     required: false,
-    minlength: 6,
   },
   code: {
     type: String,
@@ -56,7 +52,8 @@ const UserSchema = new Schema<IUser>({
   },
   role: {
     type: String,
-    default: 'user',
+    enum: Object.values(UserRole),
+    default: UserRole.USER,
   },
   submission: [submissionSchema],
   resetPasswordToken: String,
@@ -70,8 +67,6 @@ const UserSchema = new Schema<IUser>({
   timestamps: true,
 });
 
-// Create sparse unique index for email
-UserSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 const User = mongoose.model("User", UserSchema);
 export default User;

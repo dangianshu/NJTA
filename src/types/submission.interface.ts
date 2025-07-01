@@ -1,22 +1,23 @@
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
-export interface ISubmission extends Document {
-  _id: string;
-  status: string;
-  submitted: boolean;
-  subplan: string;
-  pdfLink?: string;
-  submissionDate?: Date;
-  userId: string;
+export interface IAns {
+  type?: number;
+  text?: string;
+  value?: string;
+  no?: number;
 }
 
-export interface ISubmissionPlan extends Document {
-  title: string;
-  dueDate?: Date
-  regularSubmissionOpen?: Date;
-  regularSubmissionClose?: Date;
-  evaluationOpenDate?: Date;
-  evaluationCloseDate?: Date;
-  reSubmissionDate?: Date;
-  sections?: [];
+export interface IQuestionairItem {
+  question: Types.ObjectId;
+  ans: IAns[];
+}
+
+export interface ISubmission extends Document {
+  subplan: Types.ObjectId;
+  section: Types.ObjectId;
+  questionair: IQuestionairItem[];
+  user: Types.ObjectId;
+  status: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

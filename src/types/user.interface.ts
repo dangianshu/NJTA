@@ -1,4 +1,4 @@
-import { ISubmission } from "./submission.interface";
+import { ISubmission } from "./submissionPlan.interface";
 
 export interface IUser extends Document {
   _id: string;

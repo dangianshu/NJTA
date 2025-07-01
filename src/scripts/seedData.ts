@@ -1,173 +1,19 @@
-import  User  from '../models/User.models'
-import bcrypt from 'bcrypt';
+import {seedUsers} from '../seeds/users.seed';
+import { seedSubmissionPlans } from '../seeds/plan.seed';
+import { seedSections } from '../seeds/section.seed';
+import { seedQuestions } from '../seeds/question.seed';
 
-export const seedUsers = async (): Promise<void> => {
-  try {
-    // Drop the collection to remove old indexes
-    await User.collection.drop().catch(() => console.log('Collection does not exist yet'));
-    console.log('🗑️ Dropped users collection and indexes')
-    
-    // Clear any remaining documents
-    await User.deleteMany({})
-    console.log('🗑️ Cleared existing users')
-
-    // Organizations - only basic info (they register with code later)
-    const organizations = [
-      {
-        name: 'Bay Atlantic Symphony',
-        contact: 'Music Team',
-        code: 'NJACCESS425',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-      {
-        name: 'Princeton Art Center',
-        contact: 'Cultural Affairs',
-        code: 'NJACCESS510',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-      {
-        name: 'Hudson Valley Theatre',
-        contact: 'Drama Department',
-        code: 'NJACCESS622',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-      {
-        name: 'Atlantic City Arts Council',
-        contact: 'Community Outreach',
-        code: 'NJACCESS733',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-      {
-        name: 'Trenton Cultural Foundation',
-        contact: 'Program Director',
-        code: 'NJACCESS844',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-      {
-        name: 'Trenton Cultural Foundation',
-        contact: 'Program Director',
-        code: 'NJACCESS845',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-      {
-        name: 'Trenton Cultural Foundation',
-        contact: 'Program Director',
-        code: 'NJACCESS846',
-        role: 'user',
-        isVerified: false,
-        submission: [],
-      },
-    ]
-
-    // Evaluators - full details with login access
-    const evaluators = [
-      {
-        name: 'New Jersey Theatre Alliance (Evaluator)',
-        contact: 'Alex and Dani',
-        email: 'eval126@yopmail.com',
-        password: 'Testeval@123', // Will be hashed by model
-        code: 'EVAL126',
-        role: 'evaluator',
-        isVerified: true,
-        submission: [],
-      },
-      {
-        name: 'Arts Council Evaluator',
-        contact: 'Sarah Johnson',
-        // email: 'eval127@njta.org',
-        // password: 'Testeval@123',
-        code: 'EVAL127',
-        role: 'evaluator',
-        isVerified: true,
-        submission: [],
-      },
-      {
-        name: 'Cultural Assessment Team',
-        contact: 'Michael Chen',
-        // email: 'eval128@njta.org',
-        // password: 'Testeval@123',
-        code: 'EVAL128',
-        role: 'evaluator',
-        isVerified: true,
-        submission: [],
-      },
-      {
-        name: 'Performance Review Board',
-        contact: 'Lisa Martinez',
-        email: 'eval129@yopmail.com',
-        password: 'Testeval@123',
-        code: 'EVAL129',
-        role: 'evaluator',
-        isVerified: true,
-        submission: [],
-      },
-      {
-        name: 'Performance Review Board',
-        contact: 'Lisa Martinez',
-        // email: 'eval129@yopmail.com',
-        // password: 'Testeval@123',
-        code: 'EVAL130',
-        role: 'evaluator',
-        isVerified: true,
-        submission: [],
-      },
-            {
-        name: 'Performance Review Board',
-        contact: 'Lisa Martinez',
-        // email: 'eval129@yopmail.com',
-        // password: 'Testeval@123',
-        code: 'EVAL131',
-        role: 'evaluator',
-        isVerified: true,
-        submission: [],
-      },
-    ]
-
-    // Admins - full administrative access
-    const admins = [
-      {
-        name: 'NJTA System Administrator',
-        contact: 'IT Department',
-        email: 'admin@njta.org',
-        password: 'Admin@123',
-        code: 'ADMIN001',
-        role: 'admin',
-        isVerified: true,
-        isActive: true,
-        submission: [],
-      }
-    ]
-
-    // Insert all users
-    const allUsers = [...organizations, ...evaluators, ...admins]
-    for (const user of [...evaluators, ...admins]) {
-  if (user.password) {
-    user.password = await bcrypt.hash(user.password, 10);
-  }
-}
-    await User.insertMany(allUsers)
-
-    console.log(`✅ Seeded users successfully:`)
-    console.log(`   📋 ${organizations.length} Organizations (code-based registration)`)
-    console.log(`   🔍 ${evaluators.length} Evaluators (with login access)`)
-    console.log(`   👑 ${admins.length} Admins (full access)`)
-
-  } catch (error) {
-    console.error('❌ Error seeding users:', error)
-    throw error
-  }
+export async function runAllSeeds() {
+  await seedUsers();
+  await seedSubmissionPlans();
+  await seedSections();
+  await seedQuestions();
+  console.log('✅ All seeds executed successfully!');
 }
 
-export default seedUsers
+if (require.main === module) {
+  runAllSeeds().catch((err) => {
+    console.error('❌ Error running seeds:', err);
+    process.exit(1);
+  });
+}
