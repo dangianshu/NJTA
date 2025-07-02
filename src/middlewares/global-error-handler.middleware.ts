@@ -1,8 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response } from 'express'
-import fs from 'fs'
 import { CustomError } from '../types/types'
-
-const errorLogStream = fs.createWriteStream('./logs/error.log', { flags: 'a' })
 
 export const apiHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>): RequestHandler =>
     async (req, res, next) => {
@@ -24,7 +21,7 @@ export const globalErrorHandler = (err: CustomError, req: Request , res: Respons
     const ruler = '-'.repeat(110)
     const date = new Date(Date.now())
     const errorMessage = `Error occurred at: ${req.path}\n Time:${date.toISOString()}\nMessage: ${err.message}\nStack: ${err.stack}\n${ruler}\n\n`
-    errorLogStream.write(errorMessage)
+    console.error(errorMessage)
   }
 
   res.status(statusCode).json(errorResponse)
