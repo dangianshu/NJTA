@@ -9,7 +9,6 @@ const AnsSchema = new Schema(
     value: String,
     no: Number,
   },
-  { _id: false }
 );
 
 const SubmissionSchema = new Schema<ISubmission>(

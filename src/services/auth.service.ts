@@ -10,7 +10,7 @@ import { getRoleByCode } from '../helper/common'
 
 class AuthService {
   async register(userData: IRegisterRequest): Promise<IAuthResponse> {
-    const { name, email, password, contact, code } = userData
+    const { name, email, password, contact, code, redirectUrl} = userData
 
     const existingUser = await User.findOne({ code })
 
@@ -50,7 +50,15 @@ class AuthService {
     existingUser.password = hashedPassword
     existingUser.role = getRoleByCode(code)
     existingUser.hashString = hashString
-    existingUser.isVerified = true
+
+    const mailBody = {
+      email: existingUser.email|| '',
+      name: existingUser.name || '',
+      token: existingUser.hashString,
+      redirect_url: redirectUrl || 'http://192.168.0.34:3000/verify-email', 
+    }
+
+    await mailTemplateService.sendEmailVerificationMail(mailBody)
 
     await existingUser.save()
 
@@ -89,6 +97,14 @@ class AuthService {
         success: false,
         statusCode: statusCode.BAD_REQUEST,
         message: 'Please complete your registration first',
+      }
+    }
+
+    if(!user.isVerified) {
+      return {
+        success: false,
+        statusCode: statusCode.UNAUTHORIZED,
+        message: 'Please verify your email before logging in',
       }
     }
 
@@ -147,7 +163,6 @@ class AuthService {
       token: resetToken,
       redirect_url: redirectUrl || '',
     }
-    console.log('mailBody', mailBody)
     await mailTemplateService.sendForgotPasswordMail(mailBody)
 
     return {
@@ -180,6 +195,36 @@ class AuthService {
       success: true,
       statusCode: statusCode.SUCCESS,
       message: 'Password reset successful',
+    }
+  }
+
+  async verifyEmail(hashString: string): Promise<IAuthResponse> {
+    const user = await User.findOne({ hashString })
+
+    if (!user) {
+      return {
+        success: false,
+        statusCode: statusCode.BAD_REQUEST,
+        message: 'Invalid verification link',
+      }
+    }
+
+    if (user.isVerified) {
+      return {
+        success: false,
+        statusCode: statusCode.BAD_REQUEST,
+        message: 'Email is already verified',
+      }
+    }
+
+    user.isVerified = true
+    user.hashString = undefined 
+    await user.save()
+
+    return {
+      success: true,
+      statusCode: statusCode.SUCCESS,
+      message: 'Email verified successfully! You can now login.',
     }
   }
 }

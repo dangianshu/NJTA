@@ -19,5 +19,11 @@ export interface ISendInvitation {
   password: string;
   redirectUrl?: string;
   role: string
-  
+}
+
+export interface ISendEmailVerification {
+  email: string
+  name: string
+  token: string
+  redirect_url: string
 }

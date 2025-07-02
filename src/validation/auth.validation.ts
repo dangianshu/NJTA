@@ -35,6 +35,11 @@ export const registerValidation = Joi.object({
   code: Joi.string().required().messages({
     'string.empty': 'Organization/Evaluator ID is required',
     'any.required': 'Organization/Evaluator ID is required'
+  }),
+  redirectUrl: Joi.string().uri().required().messages({
+    'string.empty': 'Redirect URL is required',
+    'string.uri': 'Please provide a valid URL',
+    'any.required': 'Redirect URL is required'
   })
 });
 

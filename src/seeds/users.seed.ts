@@ -1,10 +1,10 @@
 import  User  from '../models/User.models'
 import bcrypt from 'bcrypt';
 
-export const seedUsers = async (): Promise<void> => {
+export const seedUsers = async () => {
   try {
     // Drop the collection to remove old indexes
-    await User.collection.drop().catch(() => console.log('Collection does not exist yet'));
+    await User.collection.drop().catch(() => console.log('Collection does not exist yet'))
     
     // Clear any remaining documents
     await User.deleteMany({})
@@ -148,10 +148,11 @@ export const seedUsers = async (): Promise<void> => {
     // Insert all users
     const allUsers = [...organizations, ...evaluators, ...admins]
     for (const user of [...evaluators, ...admins]) {
-  if (user.password) {
-    user.password = await bcrypt.hash(user.password, 10);
-  }
-}
+      if (user.password) {
+        user.password = await bcrypt.hash(user.password, 10)
+      }
+    }
+    
     await User.insertMany(allUsers)
 
     console.log(`✅ Seeded users successfully:`)
@@ -159,8 +160,9 @@ export const seedUsers = async (): Promise<void> => {
     console.log(`   🔍 ${evaluators.length} Evaluators (with login access)`)
     console.log(`   👑 ${admins.length} Admins (full access)`)
 
+    return allUsers
   } catch (error) {
-    console.error('❌ Error seeding users:', error)
+    console.error('❌ Error seeding users:', error instanceof Error ? error.message : error)
     throw error
   }
 }

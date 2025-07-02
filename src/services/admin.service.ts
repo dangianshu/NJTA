@@ -1,7 +1,6 @@
 import User from '../models/User.models'
 import { encrypt } from '../helper/encrypt'
 import { statusCode } from '../utils/statusCode'
-import crypto from 'crypto'
 import {
   IAuthResponse,
   IinvaiteRequest,

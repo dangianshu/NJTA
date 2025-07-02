@@ -11,3 +11,59 @@ export interface IQuestion extends Document {
   subQuestions: mongoose.Types.ObjectId[]; // or string[] if subQuestions are embedded
   role: string[];
 }
+
+export interface IAnswerData {
+  type: number
+  text: string
+  value: string
+  no: number
+}
+
+export interface ISubmitQuestionData {
+  userId: string
+  section: string
+  plan: string
+  question: string
+  ans: IAnswerData[]
+  role: string
+}
+
+export interface IDashboardData {
+  plans: any[]
+  user: {
+    name: string
+    email: string
+    code: string
+    role: string
+    id: string
+  }
+  submissions: any[]
+}
+
+ export interface ISurveyData {
+  sections: any[]
+  selectedSection: any
+  nextSection: any
+  plan: any
+  role: string
+  prevSectionLink: any
+  statusCompleted: boolean
+  user: {
+    name: string
+  }
+}
+
+export interface ISubmissionViewData {
+  sections: any[]
+  allQuestions: any[]
+  previews: any[]
+  plan: string
+  planTitle: string
+  statusCompleted: boolean
+  showSubmit: boolean
+  user: {
+    name: string
+    code: string
+    id: string
+  }
+}

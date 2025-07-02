@@ -30,6 +30,7 @@ export interface IRegisterRequest {
   password2: string;
   contactName: string;
   code: string;
+  redirectUrl?: string;
 }
 
 export interface IinvaiteRequest {

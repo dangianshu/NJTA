@@ -33,11 +33,17 @@ const SubmissionPlanSchema = new Schema<ISubmissionPlan>(
     },
   },
   {
-    timestamps: true
+    timestamps: true,
+    toObject: { virtuals: true },
+    toJSON: { virtuals: true },
   }
 )
 
-
+SubmissionPlanSchema.virtual('sections', {
+  ref: 'Section',
+  localField: '_id',
+  foreignField: 'subplan',
+})
 
 const SubmissionPlan = mongoose.model<ISubmissionPlan>('SubmissionPlan', SubmissionPlanSchema)
 export default SubmissionPlan
