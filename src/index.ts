@@ -3,7 +3,7 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import { CONFIG } from './config/env.config'
 import route from './routes/index'
-import { logUrl } from '../src/middlewares/url-logger.middleware'
+import { logUrl } from './middlewares/url-logger.middleware'
 import { connectDB } from './config/db.config'
 import { globalErrorHandler } from './middlewares/global-error-handler.middleware'
 
