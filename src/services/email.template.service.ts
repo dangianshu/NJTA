@@ -48,14 +48,12 @@ class MailTemplateService {
   }
 
   async sendEmailVerificationMail(body: ISendEmailVerification) {
-    console.log('Sending email verification with body:', body)
     try {
       const emailCheckData = {
         to: body?.email,
         subject: 'NJTA - Verify Your Email Address',
         html: sendEmailVerificationTemplate.sendEmailVerification(body),
       }
-      console.log('Email verification data:', emailCheckData)
       const isMailSent = await sendMail(emailCheckData)
       console.log('Email verification sent status:', isMailSent)
       if (!isMailSent) {
