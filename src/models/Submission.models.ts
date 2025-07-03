@@ -4,7 +4,7 @@ import { SubmissionStatus } from '../utils/constante';
 
 const AnsSchema = new Schema(
   {
-    type: { type: Number, default: 1 }, // 1: primary, 2: secondary
+    type: { type: Number, default: 1 }, 
     text: String,
     value: String,
     no: Number,
@@ -39,7 +39,7 @@ const SubmissionSchema = new Schema<ISubmission>(
     },
     status: {
       type: String,
-      default: SubmissionStatus.INPROGRESS,
+      default: SubmissionStatus.IN_PROGRESS,
       enum: Object.values(SubmissionStatus),
     },
   },

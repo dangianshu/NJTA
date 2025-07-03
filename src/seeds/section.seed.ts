@@ -12,11 +12,6 @@ export const sectionSeedData = [
     "no": 2,
     "role": ["user"],
     "title": "Employment/Volunteer Practices"
-  },
-  {
-    "no": 3,
-    "role": ["user"],
-    "title": "Grievance Procedures"
   }
 ]
 

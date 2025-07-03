@@ -124,6 +124,7 @@ class AuthService {
       id: user._id.toString(),
       email: user.email!,
       role: user.role,
+      name: user.name,
     }
 
     const token = generateJWTToken(payload)

@@ -40,6 +40,15 @@ export interface IDashboardData {
   submissions: any[]
 }
 
+export interface IDashboardPaginatedResponse {
+  plans: any[]
+  pagination: {
+    limit: number
+    page: number
+    total: number
+  }
+}
+
  export interface ISurveyData {
   sections: any[]
   selectedSection: any
@@ -51,6 +60,39 @@ export interface IDashboardData {
   user: {
     name: string
   }
+}
+
+export interface ISubmitSurveyData {
+  sections: ISubmitSurveySection[]
+  plan: string
+  status: string
+}
+
+export interface ISubmitSurveySection {
+  _id: string
+  no: number
+  subplan: string
+  role: string[]
+  title: string
+  questions: {
+    _id: string
+    no: string
+    optional: boolean
+    options: string[]
+    qtype: string
+    question: string
+    role: string[]
+    section: string
+    subQuestions: any[]
+    ans: IAnswerData[]
+  }[]
+  status: string
+}
+
+export interface ISubmitSurveyPayload {
+  sections: ISubmitSurveySection[]
+  plan: string
+  status: string
 }
 
 export interface ISubmissionViewData {

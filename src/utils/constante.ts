@@ -5,11 +5,13 @@ export enum UserRole {
 }
 
 export enum SubmissionStatus {
-  COMPLETED = 'completed',
-  INPROGRESS = 'inprogress',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  NEED_IMPROVEMENT = 'needImprovement',
-  SUBMITTED = 'submitted',
-  NI_SUBMITTED = 'NISubmitted',
+  IN_PROGRESS = "In Progress",
+  SUBMISSION_CLOSED = "Submission Closed",
+  NEEDS_IMPROVEMENT = "Needs Improvement",
+  REJECTED = "Rejected",
+  APPROVED = "Approved",
+  DRAFT = "Draft",
+  SUBMITTED = "Submitted",
+  COMPLETED = "Completed",
+  INCOMPLETE = "Incomplete",
 }

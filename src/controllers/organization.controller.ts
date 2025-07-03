@@ -7,17 +7,13 @@ class OrganizationController {
   async getDashboard(req: Request, res: Response) {
     try {
       const userId = req.user?.id
-      
-      if (!userId) {
-        return responseData({
-          res,
-          statusCode: statusCode.UNAUTHORIZED,
-          success: 0,
-          error: 'User not authenticated',
-        })
+      const { page = 1, limit = 10 } = req.query
+      const pagination = {
+        page: Number(page),
+        limit: Number(limit),
       }
-
-      const result = await organizationService.getDashboard(userId)
+      
+      const result = await organizationService.getDashboard(userId, pagination)
 
       if (!result.success) {
         return responseData({
@@ -49,7 +45,6 @@ class OrganizationController {
   async takeSurvey(req: Request, res: Response) {
     try {
       const { planID } = req.params
-      const { cat } = req.query
       const userId = req.user?.id
       const userRole = req.user?.role
 
@@ -62,7 +57,7 @@ class OrganizationController {
         })
       }
 
-      const result = await organizationService.takeSurvey(userId, planID, userRole, cat as string)
+      const result = await organizationService.takeSurvey(userId, planID, userRole)
 
       if (!result.success) {
         return responseData({
@@ -91,9 +86,9 @@ class OrganizationController {
     }
   }
 
-  async viewSubmissions(req: Request, res: Response) {
+  async submitSurvey(req: Request, res: Response) {
     try {
-      const { plan, showSubmit } = req.params
+      const { sections, plan, status } = req.body
       const userId = req.user?.id
       const userRole = req.user?.role
 
@@ -106,66 +101,30 @@ class OrganizationController {
         })
       }
 
-      const result = await organizationService.viewSubmissions(userId, plan, userRole, showSubmit === 'true')
-
-      if (!result.success) {
-        return responseData({
-          res,
-          statusCode: result.statusCode,
-          success: 0,
-          error: result.message,
-        })
-      }
-
-      return responseData({
-        res,
-        statusCode: result.statusCode,
-        success: 1,
-        message: result.message,
-        data: result.data,
-      })
-    } catch (error) {
-      console.error('[OrgController] viewSubmissions error:', error)
-      return responseData({
-        res,
-        statusCode: statusCode.SERVER_ERROR,
-        success: 0,
-        error: (error as Error).message,
-      })
-    }
-  }
-
-  async submitQuestionDraft(req: Request, res: Response) {
-    try {
-      const { section, plan, question, ans, role } = req.body
-      const userId = req.user?.id
-
-      if (!userId) {
-        return responseData({
-          res,
-          statusCode: statusCode.UNAUTHORIZED,
-          success: 0,
-          error: 'User not authenticated',
-        })
-      }
-
       // Validate required fields
-      if (!section || !plan || !question || !ans || !role) {
+      if (!sections || !plan || !status) {
         return responseData({
           res,
           statusCode: statusCode.BAD_REQUEST,
           success: 0,
-          error: 'Missing required fields: section, plan, question, ans, role',
+          error: 'Missing required fields: sections, plan, status',
         })
       }
 
-      const result = await organizationService.submitQuestionDraft({
-        userId,
-        section,
+      if (!Array.isArray(sections) || sections.length === 0) {
+        return responseData({
+          res,
+          statusCode: statusCode.BAD_REQUEST,
+          success: 0,
+          error: 'Sections must be a non-empty array',
+        })
+      }
+
+      // Call service with separate parameters (userId, userRole) and payload
+      const result = await organizationService.submitSurvey(userId, userRole, {
+        sections,
         plan,
-        question,
-        ans,
-        role,
+        status
       })
 
       if (!result.success) {
@@ -184,8 +143,8 @@ class OrganizationController {
         message: result.message,
         data: result.data,
       })
-    } catch (error) {
-      console.error('[OrgController] submitQuestionDraft error:', error)
+    } catch (error) { 
+      console.error('[OrgController] submitSurvey error:', error)
       return responseData({
         res,
         statusCode: statusCode.SERVER_ERROR,
@@ -194,6 +153,8 @@ class OrganizationController {
       })
     }
   }
+
+
 }
 
 const organizationController = new OrganizationController()
