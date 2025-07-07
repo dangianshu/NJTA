@@ -154,6 +154,34 @@ class OrganizationController {
     }
   }
 
+  async submitSubmission(req: Request, res: Response) {
+    try {
+      const result = await organizationService.submitSubmissionWithFiles(req);
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        });
+      }
+      return responseData({
+        res,
+        statusCode: statusCode.SUCCESS,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      console.error('[OrgController] submitSubmission error:', error);
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      });
+    }
+  }
 
 }
 

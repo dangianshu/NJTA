@@ -30,6 +30,15 @@ const SubmissionSchema = new Schema<ISubmission>(
           ref: 'Question',
         },
         ans: [AnsSchema],
+        subQuestions: [
+          {
+            question: {
+              type: Schema.Types.ObjectId,
+              ref: 'Question',
+            },
+            ans: [AnsSchema],
+          }
+        ]
       },
     ],
     user: {

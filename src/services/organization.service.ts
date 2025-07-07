@@ -9,6 +9,7 @@ import { IServiceResponse } from '../types/auth.interface'
 import { ISubmissionViewData, ISubmitQuestionData, IAnswerData, IDashboardPaginatedResponse, ISubmitSurveyPayload, ISubmitSurveyData } from '../types/question.interface'
 import { IPagination } from '../types/common.interface'
 import mongoose from 'mongoose'
+import { injectFileAnswersToSections } from '../helper/multer'
 
 class OrganizationService {
   // Helper function to find answers in submissions
@@ -16,7 +17,9 @@ class OrganizationService {
     for (const submission of submissions) {
       if (submission.section?.toString() === sectionId) {
         const questionair = submission.questionair.find(
-          (q: any) => q.question?.toString() === questionId
+          (q: any) => {
+          return q.question.toString() === questionId
+          }
         )
         if (questionair) {
           return questionair.ans || []
@@ -49,28 +52,6 @@ class OrganizationService {
     return 'incomplete'
   }
 
-  // Helper function to check all statuses - simplified
-  private async checkAllStatuses(userId: string, planId: string): Promise<number> {
-    const submissions = await Submission.find({
-      user: userId,
-      subplan: planId,
-      status: SubmissionStatus.COMPLETED
-    })
-    
-    return submissions.length
-  }
-
-  // Helper function to check if all sections are completed - simplified
-  private async isAllStatusCompleted(userId: string, planId: string): Promise<number> {
-    const completedSubmissions = await Submission.countDocuments({
-      user: userId,
-      subplan: planId,
-      status: SubmissionStatus.COMPLETED
-    })
-    
-    return completedSubmissions
-  }
-
   // Helper function to get plan status from user submission array
   private getPlanStatusFromUserSubmission(userSubmissions: any[], planId: string): { status: string, pdfLink: string | null } {
     const userSubmissionForPlan = userSubmissions.find(
@@ -81,33 +62,6 @@ class OrganizationService {
       status: userSubmissionForPlan ? userSubmissionForPlan.status : 'In Progress',
       pdfLink: userSubmissionForPlan ? userSubmissionForPlan.pdfLink : null
     }
-  }
-
-  // Helper function to update user submission status
-  private async checkSubmissionStatusAndUpdate(userId: string, planId: string, submitted: boolean): Promise<void> {
-    const user = await User.findById(userId)
-    if (!user || !user.submission) return
-
-    const existingSubmissionIndex = user.submission.findIndex(
-      (sub: any) => sub.subplan?.toString() === planId
-    )
-
-    if (existingSubmissionIndex > -1) {
-      user.submission[existingSubmissionIndex].status = SubmissionStatus.COMPLETED
-      user.submission[existingSubmissionIndex].submitted = submitted
-      user.submission[existingSubmissionIndex].submissionDate = new Date()
-    } else {
-      const newSubmission = {
-        status: SubmissionStatus.COMPLETED,
-        submitted: submitted,
-        subplan: planId,
-        pdfLink: '',
-        submissionDate: new Date()
-      }
-      user.submission.push(newSubmission as any)
-    }
-
-    await user.save()
   }
 
   async getDashboard(
@@ -164,6 +118,7 @@ class OrganizationService {
 
   async takeSurvey(userId: string, planId: string, userRole: string): Promise<IServiceResponse<any>> {
       const user = await User.findById(userId)
+      console.log('user', user)
       if (!user) {
         return {
           success: false,
@@ -175,6 +130,7 @@ class OrganizationService {
 
       // Get plan details to include title
       const planModel = await SubmissionPlan.findById(planId)
+      console.log('planModel', planModel)
       if (!planModel) {
         return {
           success: false,
@@ -191,6 +147,8 @@ class OrganizationService {
         .populate('questionair.question')
         .lean()
 
+        console.log('submissions', submissions)
+
       // Get all sections for the plan and user role
       const allSections = await Section.find({
         subplan: planId,
@@ -204,10 +162,15 @@ class OrganizationService {
         .sort({ no: 1 })
         .lean()
 
+        console.log('allSections', allSections)
+
       // Process sections with questions and answers
       const processedSections = allSections.map((section: any) => {
+        console.log("---:",section)
         const questions = section.questions.map((question: any) => {
+          console.log('----::question', question)
           const answers = this.findAnswers(section._id.toString(), question._id.toString(), submissions)
+          console.log('-----:::answers', answers)
           return {
             ...question,
             ans: answers
@@ -216,6 +179,7 @@ class OrganizationService {
 
         // Determine section status
         let sectionStatus = this.findStatus(section._id.toString(), submissions, section.questions.length)
+        console.log('sectionStatus', sectionStatus)
 
         if (sectionStatus === 'incomplete') {
           sectionStatus = 'In Progress'
@@ -239,6 +203,8 @@ class OrganizationService {
           status: sectionStatus
         }
       })
+        console.log('processedSections',processedSections)
+
 
       // Get plan status from user's submission array using common helper function
       const { status: planStatus } = this.getPlanStatusFromUserSubmission(user.submission || [], planId)
@@ -257,30 +223,6 @@ class OrganizationService {
     
   }
 
-
-
-  /**
-   * Submit survey responses for a user
-   * 
-   * @param userId - User ID from authentication token
-   * @param userRole - User role from authentication token  
-   * @param payload - The survey submission data containing sections, plan ID, and status
-   * @returns Promise<IServiceResponse<any>> - Service response with submission results
-   * 
-   * Status Logic:
-   * - Submission Model: Stores actual section completion status (In Progress/Completed/Needs Improvement)
-   * - User Model: Stores overall plan status (Draft/In Progress/Submitted/Completed)
-   * - Section status is determined by question completion, not the requested status
-   * - Plan status in user table uses the requested status (Draft/Submitted) or calculated status
-   * 
-   * Features:
-   * - Comprehensive input validation
-   * - Individual section processing with error isolation
-   * - Question and answer validation against database
-   * - User submission status tracking
-   * - Completion statistics calculation
-   * - Detailed error reporting for failed sections
-   */
   async submitSurvey(userId: string, userRole: string, payload: ISubmitSurveyData): Promise<IServiceResponse<any>> {
     try {
       // Check if payload exists and is an object
@@ -604,10 +546,6 @@ class OrganizationService {
     }
   }
 
-  /**
-   * Alternative submitSurvey method that handles payload-only calls (for backward compatibility)
-   * This method extracts userId and userRole from the payload if they exist
-   */
   async submitSurveyLegacy(payload: any): Promise<IServiceResponse<any>> {
     try {
       if (!payload) {
@@ -730,6 +668,122 @@ class OrganizationService {
     }
   }
 
+  async submitSubmissionWithFiles(req: any) {
+    try {
+      // Parse form-data fields
+      console.log('[OrganizationService] submitSubmissionWithFiles - req.body:', req.body);
+      const { plan, status } = req.body;
+      // Get user ID from token (set by verifyToken middleware)
+      const userId = req.user && req.user.id ? req.user.id : undefined;
+      let sections = req.body.sections;
+      let file_map = req.body.file_map;
+      if (!plan || !userId || !status || !sections) {
+        return {
+          success: false,
+          statusCode: statusCode.BAD_REQUEST,
+          message: 'Missing required fields',
+        };
+      }
+      // Parse JSON fields
+      if (typeof sections === 'string') sections = JSON.parse(sections);
+      if (typeof file_map === 'string') file_map = JSON.parse(file_map);
+      // Map file_map by questionId
+      const fileMapByQuestion: Record<string, any> = {};
+      (file_map || []).forEach((f: any) => {
+        fileMapByQuestion[f.questionId] = f;
+      });
+      // Map uploaded files by originalname
+      const filesByName: Record<string, any> = {};
+      (req.files || []).forEach((file: any) => {
+        filesByName[file.originalname] = file;
+      });
+      // Inject file answers into questions/subQuestions (qtype: file)
+      injectFileAnswersToSections(sections, fileMapByQuestion, filesByName);
+      // For each section, create or update Submission
+      const submissionIds: any[] = [];
+      for (const section of sections) {
+        const questionair = (section.questions || []).map((q: any) => ({
+          question: q._id,
+          ans: q.ans || [],
+          subQuestions: (q.subQuestions || []).map((subQ: any) => ({
+            question: subQ._id,
+            ans: subQ.ans || []
+          }))
+        }));
+        // Upsert Submission for user+section+plan
+        let submission = await Submission.findOne({
+          user: userId,
+          section: section._id,
+          subplan: plan,
+        });
+        if (submission) {
+          submission.status = section.status || status; // Store section status in Submission
+          submission.questionair = questionair;
+          await submission.save();
+        } else {
+          submission = await Submission.create({
+            user: userId,
+            section: section._id,
+            subplan: plan,
+            status: section.status || status,
+            questionair,
+          });
+        }
+        submissionIds.push(submission._id);
+      }
+      // Update User's submission array (main status)
+      const userDoc = await User.findById(userId);
+      if (!userDoc) {
+        return {
+          success: false,
+          statusCode: statusCode.NOTFOUND,
+          message: 'User not found',
+        };
+      }
+      let updated = false;
+      const planIdStr = plan.toString();
+      if (!userDoc.submission) userDoc.submission = [];
+      let found = false;
+      for (const sub of userDoc.submission) {
+        if (sub.subplan && sub.subplan.toString() === planIdStr) {
+          sub.status = status;
+          if (typeof status === 'string' && status.trim().toLowerCase() === 'submitted') {
+            sub.submitted = true;
+            sub.submissionDate = new Date();
+          } else {
+            sub.submitted = false;
+            sub.submissionDate = undefined;
+          }
+          found = true;
+          updated = true;
+        }
+      }
+      if (!found) {
+        userDoc.submission.push({
+          subplan: plan,
+          status,
+          submitted: typeof status === 'string' && status.trim().toLowerCase() === 'submitted',
+          pdfLink: '',
+          submissionDate: (typeof status === 'string' && status.trim().toLowerCase() === 'submitted') ? new Date() : undefined,
+        } as any); // 'as any' to satisfy TS for embedded subdoc
+        updated = true;
+      }
+      if (updated) await userDoc.save();
+      return {
+        success: true,
+        statusCode: statusCode.SUCCESS,
+        message: 'Submission saved successfully',
+        data: { submissionIds },
+      };
+    } catch (error: any) {
+      console.error('[OrganizationService] submitSubmissionWithFiles error:', error);
+      return {
+        success: false,
+        statusCode: statusCode.SERVER_ERROR,
+        message: error.message || 'Server error',
+      };
+    }
+  }
 }
 
 const organizationService = new OrganizationService()
