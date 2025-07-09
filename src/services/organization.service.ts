@@ -6,28 +6,12 @@ import Submission from '../models/Submission.models'
 import { statusCode } from '../utils/statusCode'
 import { SubmissionStatus } from '../utils/constant'
 import { IServiceResponse } from '../types/auth.interface'
-import { ISubmissionViewData, ISubmitQuestionData, IAnswerData, IDashboardPaginatedResponse, ISubmitSurveyPayload, ISubmitSurveyData } from '../types/question.interface'
+import { IAnswerData, IDashboardPaginatedResponse, ISubmitSurveyData } from '../types/question.interface'
 import { IPagination } from '../types/common.interface'
 import mongoose from 'mongoose'
 import { injectFileAnswersToSections } from '../helper/multer'
 
 class OrganizationService {
-  // Helper function to find answers in submissions
-  private findAnswers(sectionId: string, questionId: string, submissions: any[]): IAnswerData[] {
-    for (const submission of submissions) {
-      if (submission.section?.toString() === sectionId) {
-        const questionair = submission.questionair.find(
-          (q: any) => {
-          return q.question.toString() === questionId
-          }
-        )
-        if (questionair) {
-          return questionair.ans || []
-        }
-      }
-    }
-    return []
-  }
 
   // Helper function to find section status
   private findStatus(sectionId: string, submissions: any[], totalQuestions: number): string {

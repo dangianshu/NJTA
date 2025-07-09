@@ -1,3 +1,5 @@
+import User from "../models/User.models";
+
 export function getRoleByCode(code: string): 'user' | 'evaluator' {
   if (code.startsWith('EVAL')) return 'evaluator'
   if (code.startsWith('NJA')) return 'user'
@@ -108,4 +110,9 @@ export async function calculateCompletionStats(Section: any, Submission: any, us
     completedSections,
     completionPercentage
   };
+}
+
+export async function getUserRoleById(userId: string): Promise<string | null> {
+  const user = await User.findById(userId).select('role');
+  return user?.role?.toLowerCase() || null;
 }

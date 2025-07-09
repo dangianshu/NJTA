@@ -7,12 +7,15 @@ import {
   IServiceResponse,
   IUserPaginatedResponse,
 } from '../types/auth.interface'
-import { getRoleByCode, generateCustomPassword, getTypeByCode } from '../helper/common'
+import { getRoleByCode, generateCustomPassword, getTypeByCode, findStatus, getUserRoleById } from '../helper/common'
 import mailTemplateService from './email.template.service'
 import { IUser } from '../types/user.interface'
 import { IPagination } from '../types/common.interface'
 import SubmissionPlan from '../models/SubmissionPlan.models'
-
+import Submission from '../models/Submission.models'
+import Section from '../models/Section.models'
+import Question from '../models/Question.models'
+import { SubmissionStatus } from '../utils/constant'
 
 class AdminService {
   async createInvitation(userData: IinvaiteRequest): Promise<IAuthResponse> {
@@ -168,47 +171,47 @@ class AdminService {
     fy: string = '',
     search: string = ''
   ): Promise<IServiceResponse<IUserPaginatedResponse>> {
-    const { page = 1, limit = 10 } = pagination;
-    const skip = (page - 1) * limit;
-  
+    const { page = 1, limit = 10 } = pagination
+    const skip = (page - 1) * limit
+
     // 1. Get all submission plans (no sorting)
-    const plans = await SubmissionPlan.find({});
-  
+    const plans = await SubmissionPlan.find({})
+
     // 2. Build query
-    const query: any = {};
-  
+    const query: any = {}
+
     if (fy) {
-      const fyPlan = await SubmissionPlan.findOne({ title: fy });
+      const fyPlan = await SubmissionPlan.findOne({ title: fy })
       if (fyPlan) {
-        query['submission.subplan'] = fyPlan._id;
+        query['submission.subplan'] = fyPlan._id
       }
     }
-  
+
     if (role && role !== 'null') {
       query.code = {
         ...(role === 'evaluator' && { $regex: 'EVAL' }),
         ...(role !== 'evaluator' && { $not: /EVAL/i }),
-      };
+      }
     }
-  
-      if (search?.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { name: { $regex: searchRegex } },
-      ];
+
+    if (search?.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i')
+      query.$or = [{ name: { $regex: searchRegex } }]
     }
-  
+
     const users = await User.find(query)
-    .populate({
-      path: 'submission.subplan',
-      model: 'SubmissionPlan',
-    })
-     .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
-        .skip(skip)
-        .limit(limit)
-  
-    const filteredUsers = users.filter(user => Array.isArray(user.submission) && user.submission.length > 0);
-  
+      .populate({
+        path: 'submission.subplan',
+        model: 'SubmissionPlan',
+      })
+      .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+      .skip(skip)
+      .limit(limit)
+
+    const filteredUsers = users.filter(
+      (user) => Array.isArray(user.submission) && user.submission.length > 0
+    )
+
     return {
       success: true,
       statusCode: statusCode.SUCCESS,
@@ -218,100 +221,188 @@ class AdminService {
         pagination: {
           page,
           limit,
-          total: filteredUsers.length, 
+          total: filteredUsers.length,
         },
       },
-    };
+    }
   }
 
+  async getPreviewSubmissions(planId: string, userId: string) {
+    try {
+      // 1. Fetch user and plan
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'User not found',
+          data: null,
+        };
+      }
+      const planModel = await SubmissionPlan.findById(planId);
+      if (!planModel) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Plan not found',
+          data: null,
+        };
+      }
 
-  // async getPreviewSubmissions(planId: string, userId: string) {
-  //     const submissions = await Submission.find({
-  //       user: userId,
-  //       subplan: planId,
-  //     })
-  //       .populate({ path: 'questionair.question' })
-  //       .lean()
+      // 2. Fetch all submissions for this user and plan
+      const submissions = await Submission.find({
+        subplan: planId,
+        user: userId
+      }).lean();
 
-  //     // 2. Get user and plan
-  //     const userModel = await User.findById(userId)
-  //     const planModel = await SubmissionPlan.findById(planId)
-  //     if (!userModel || !planModel) {
-  //       return {
-  //         success: false,
-  //         statusCode: 404,
-  //         message: 'User or Plan not found',
-  //       }
-  //     }
-  //     // 3. Get sections for plan and user role
-  //     let sections = await Section.find({
-  //       subplan: planId,
-  //       role: { $in: [userModel.role?.toLowerCase()] },
-  //     })
-  //       .sort({ no: 1 })
-  //       .populate([
-  //         {
-  //           path: 'questions',
-  //           match: { role: { $in: [userModel.role?.toLowerCase()] } },
-  //           options: { sort: { no: 1 } },
-  //         },
-  //       ])
-  //       .lean()
-  //     // 4. Get all questions for these sections and user role
-  //     let allQuestions = await Question.find({
-  //       section: { $in: sections.map((sec: any) => sec._id) },
-  //       role: { $in: [userModel.role?.toLowerCase()] },
-  //     })
-  //       .sort({ no: 1 })
-  //       .lean()
-  //     // 5. Calculate status for each section
-  //     sections = sections.map((section: any) => {
-  //       let sectionQuestions = allQuestions.filter(
-  //         (q: any) => q.section.toString() === section._id.toString()
-  //       )
-  //       return {
-  //         ...section,
-  //         status: findStatus(
-  //           section._id,
-  //           submissions,
-  //           sectionQuestions.length,
-  //           SubmissionStatus
-  //         ),
-  //       }
-  //     })
-  //     // 6. Attach answers to each question
-  //     allQuestions = allQuestions.map((question: any) => {
-  //       let ans = []
-  //       for (const submission of submissions) {
-  //         if (submission.section?.toString() === question.section.toString()) {
-  //           const qair = submission.questionair.find(
-  //             (q: any) => q.question.toString() === question._id.toString()
-  //           )
-  //           if (qair) {
-  //             ans = qair.ans || []
-  //             break
-  //           }
-  //         }
-  //       }
-  //       return {
-  //         ...question,
-  //         ans,
-  //       }
-  //     })
-  //     return {
-  //       success: true,
-  //       statusCode: 200,
-  //       message: 'Preview data fetched successfully',
-  //       data: {
-  //         sections,
-  //         allQuestions,
-  //         // previews, // Uncomment if you implement reorder
-  //         user: userId,
-  //         plan: planId,
-  //         planTitle: planModel.title,
-  //       },
-  //     }
-  // }
+      // 3. Build a map: { [sectionId]: { [questionId]: ans[] } }
+      const submissionMap: Record<string, Record<string, any[]>> = {};
+      for (const sub of submissions) {
+        const sectionId = sub.section?.toString();
+        if (!sectionId) continue;
+        if (!submissionMap[sectionId]) submissionMap[sectionId] = {};
+        for (const q of sub.questionair || []) {
+          submissionMap[sectionId][q.question.toString()] = q.ans || [];
+        }
+      }
+
+      // 4. Fetch all sections for the plan and user role (from user.role)
+      const userRole = user.role;
+      const allSections = await Section.find({
+        subplan: planId,
+        role: { $in: [userRole.toLowerCase()] }
+      })
+        .populate({
+          path: 'questions',
+          match: { role: { $in: [userRole.toLowerCase()] } },
+          options: { sort: { no: 1 } }
+        })
+        .sort({ no: 1 })
+        .lean();
+
+      // 5. Build response sections (same as takeSurvey)
+      const processedSections = allSections.map((section: any) => {
+        const questions = (section.questions || []).map((question: any) => {
+          const ans = (submissionMap[section._id.toString()] && submissionMap[section._id.toString()][question._id.toString()]) || [];
+
+          // Find the submission for this section
+          const sectionSubmission = submissions.find(
+            (sub: any) => sub.section?.toString() === section._id.toString()
+          );
+
+          // Find the questionair entry for this question
+          const questionairEntry = sectionSubmission?.questionair?.find(
+            (q: any) => q.question.toString() === question._id.toString()
+          );
+
+          // For file-type questions, if ans is empty, try to get from questionairEntry.ans
+          let finalAns = ans;
+          if (question.qtype === 'file' && (!ans || ans.length === 0) && questionairEntry && Array.isArray(questionairEntry.ans) && questionairEntry.ans.length > 0) {
+            finalAns = questionairEntry.ans;
+          }
+
+          // Map subQuestions with their answers from the nested structure
+          let subQuestions = [];
+          if (Array.isArray(question.subQuestions) && question.subQuestions.length > 0) {
+            subQuestions = question.subQuestions.map((subQ: any) => {
+              // Find the sub-question answer in the nested subQuestions array
+              const subQEntry = Array.isArray(questionairEntry?.subQuestions)
+                ? questionairEntry.subQuestions.find(
+                    (sq: any) => sq.question.toString() === subQ._id.toString()
+                  )
+                : undefined;
+              return {
+                ...subQ,
+                ans: subQEntry?.ans || []
+              };
+            });
+          }
+
+          return {
+            ...question,
+            ans: finalAns,
+            subQuestions
+          };
+        });
+
+        // Section status logic
+        let sectionStatus = findStatus(section._id.toString(), submissions, section.questions.length, SubmissionStatus);
+        if (sectionStatus === 'incomplete' || sectionStatus === SubmissionStatus.IN_PROGRESS) {
+          sectionStatus = 'in-progress';
+        } else if (sectionStatus === SubmissionStatus.COMPLETE) {
+          sectionStatus = 'complete';
+        } else if (sectionStatus === SubmissionStatus.NEEDS_IMPROVEMENT) {
+          sectionStatus = 'correction-required';
+        }
+
+        return {
+          _id: section._id,
+          no: section.no,
+          subplan: section.subplan,
+          role: section.role,
+          createdAt: section.createdAt,
+          title: section.title,
+          updatedAt: section.updatedAt,
+          questions,
+          status: sectionStatus
+        };
+      });
+
+      // Get plan status from user's submission array
+      const userSubmissionForPlan = user.submission?.find((sub: any) => sub.subplan?.toString() === planId.toString());
+      const planStatus = userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress';
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Preview data retrieved successfully',
+        data: {
+          sections: processedSections,
+          plan: planId,
+          title: planModel.title,
+          status: planStatus,
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message || 'Server error',
+        data: null,
+      };
+    }
+  }
+
+  async updateSubmissionStatus(userId: string, subID: string, status: string) {
+    try {
+      const user = await User.findOneAndUpdate(
+        { _id: userId, 'submission._id': subID },
+        { $set: { 'submission.$.status': status } },
+        { new: true }
+      ).select('-password -resetPasswordToken -resetPasswordExpires -hashString');
+      if (!user) {
+        return {
+          success: false,
+          statusCode: statusCode.NOTFOUND,
+          message: 'User or submission not found',
+          data: null,
+        };
+      }
+      return {
+        success: true,
+        statusCode: statusCode.SUCCESS,
+        message: 'Submission status updated successfully',
+        data: user,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        statusCode: statusCode.SERVER_ERROR,
+        message: error.message || 'Server error',
+        data: null,
+      };
+    }
+  }
 }
 
 const adminService = new AdminService()

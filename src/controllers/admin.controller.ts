@@ -105,13 +105,18 @@ class AdminController {
 
   async getAllSubmission(req: Request, res: Response) {
     try {
-      const { role, page = 1, limit = 10, fy , search } = req.query
+      const { role, page = 1, limit = 10, fy, search } = req.query
       const pagination = {
         page: Number(page),
         limit: Number(limit),
       }
 
-      const result = await adminService.getAllSubmission(role as string, pagination, fy as string, search as string)
+      const result = await adminService.getAllSubmission(
+        role as string,
+        pagination,
+        fy as string,
+        search as string
+      )
 
       if (!result.success) {
         return responseData({
@@ -140,37 +145,86 @@ class AdminController {
     }
   }
 
-  // async previewSubmissions(req: Request, res: Response) {
-  //   try {
-  //     const { plan, user } = req.params
-  //     const result = await adminService.getPreviewSubmissions(plan, user)
+  async previewSubmissions(req: Request, res: Response) {
+    try {
+      const { plan, user } = req.params
 
-  //     if (!result.success) {
-  //       return responseData({
-  //         res,
-  //         statusCode: result.statusCode,
-  //         success: 0,
-  //         error: result.message,
-  //       })
-  //     }
+      if (!plan || !user) {
+        return responseData({
+          res,
+          statusCode: statusCode.BAD_REQUEST,
+          success: 0,
+          error: 'Missing plan, user',
+        })
+      }
 
-  //     return responseData({
-  //       res,
-  //       statusCode: result.statusCode,
-  //       success: 1,
-  //       message: result.message,
-  //       data: result.data,
-  //     })
-  //   } catch (error) {
-  //     console.error('[AdminController] previewSubmissions error: ', error)
-  //     return responseData({
-  //       res,
-  //       statusCode: statusCode.SERVER_ERROR,
-  //       success: 0,
-  //       error: (error as Error).message,
-  //     })
-  //   }
-  // }
+      const result = await adminService.getPreviewSubmissions(plan, user)
+
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        })
+      }
+
+      return responseData({
+        res,
+        statusCode: result.statusCode,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      })
+    } catch (error) {
+      console.error('[AdminController] previewSubmissions error: ', error)
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      })
+    }
+  }
+
+  async updateSubmissionStatus(req: Request, res: Response) {
+    try {
+      const { user, subID } = req.params
+      const { status } = req.query
+      if (!user || !subID || !status) {
+        return responseData({
+          res,
+          statusCode: statusCode.BAD_REQUEST,
+          success: 0,
+          error: 'Missing user, subID, or status',
+        })
+      }
+      const result = await adminService.updateSubmissionStatus(user, subID, String(status))
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        })
+      }
+      return responseData({
+        res,
+        statusCode: result.statusCode,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      })
+    } catch (error) {
+      console.error('[AdminController] updateSubmissionStatus error: ', error)
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      })
+    }
+  }
 }
 
 const adminController = new AdminController()
