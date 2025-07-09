@@ -16,12 +16,12 @@ export const creationInvitaionValidation = Joi.object({
     'string.empty': 'Code is required',
     'any.required': 'Code is required',
   }),
-  contact: Joi.string().min(2).max(100).required().messages({
-    'string.empty': 'Contact is required',
-    'string.min': 'Contact must be at least 2 characters',
-    'string.max': 'Contact must not exceed 100 characters',
-    'any.required': 'Contact is required',
-  }),
+  // contact: Joi.string().min(2).max(100).required().messages({
+  //   'string.empty': 'Contact is required',
+  //   'string.min': 'Contact must be at least 2 characters',
+  //   'string.max': 'Contact must not exceed 100 characters',
+  //   'any.required': 'Contact is required',
+  // }),
   redirectUrl: Joi.string().uri().required().messages({
     'string.empty': 'Redirect URL is required',
     'string.uri': 'Please provide a valid URL',

@@ -7,7 +7,13 @@ import {
   IServiceResponse,
   IUserPaginatedResponse,
 } from '../types/auth.interface'
-import { getRoleByCode, generateCustomPassword, getTypeByCode, findStatus, getUserRoleById } from '../helper/common'
+import {
+  getRoleByCode,
+  generateCustomPassword,
+  getTypeByCode,
+  findStatus,
+  getUserRoleById,
+} from '../helper/common'
 import mailTemplateService from './email.template.service'
 import { IUser } from '../types/user.interface'
 import { IPagination } from '../types/common.interface'
@@ -180,10 +186,23 @@ class AdminService {
     // 2. Build query
     const query: any = {}
 
+    // if (fy) {
+    //   const fyPlan = await SubmissionPlan.findOne({ title: fy })
+    //   console.log("🚀 ~ AdminService ~ fyPlan:", fyPlan?._id)
+    //   if (fyPlan) {
+    //     query['submission.subplan'] = fyPlan._id
+    //   }
+    // }
+
     if (fy) {
       const fyPlan = await SubmissionPlan.findOne({ title: fy })
       if (fyPlan) {
-        query['submission.subplan'] = fyPlan._id
+        query.submission = {
+          $elemMatch: {
+            subplan: fyPlan._id,
+            status: { $ne: SubmissionStatus.DRAFT },
+          },
+        }
       }
     }
 
@@ -208,9 +227,17 @@ class AdminService {
       .skip(skip)
       .limit(limit)
 
-    const filteredUsers = users.filter(
-      (user) => Array.isArray(user.submission) && user.submission.length > 0
-    )
+    // Remove draft submissions from each user
+    const filteredUsers = users
+      .map((user) => {
+        if (!Array.isArray(user.submission)) return user
+        user.submission = user.submission.filter(
+          (sub) => sub.status !== SubmissionStatus.DRAFT && sub.status !== 'draft'
+        )
+        return user
+      })
+      // Only include users with at least one non-draft submission
+      .filter((user) => Array.isArray(user.submission) && user.submission.length > 0)
 
     return {
       success: true,
@@ -230,79 +257,88 @@ class AdminService {
   async getPreviewSubmissions(planId: string, userId: string) {
     try {
       // 1. Fetch user and plan
-      const user = await User.findById(userId);
+      const user = await User.findById(userId)
       if (!user) {
         return {
           success: false,
           statusCode: 404,
           message: 'User not found',
           data: null,
-        };
+        }
       }
-      const planModel = await SubmissionPlan.findById(planId);
+      const planModel = await SubmissionPlan.findById(planId)
       if (!planModel) {
         return {
           success: false,
           statusCode: 404,
           message: 'Plan not found',
           data: null,
-        };
+        }
       }
 
       // 2. Fetch all submissions for this user and plan
       const submissions = await Submission.find({
         subplan: planId,
-        user: userId
-      }).lean();
+        user: userId,
+      }).lean()
 
       // 3. Build a map: { [sectionId]: { [questionId]: ans[] } }
-      const submissionMap: Record<string, Record<string, any[]>> = {};
+      const submissionMap: Record<string, Record<string, any[]>> = {}
       for (const sub of submissions) {
-        const sectionId = sub.section?.toString();
-        if (!sectionId) continue;
-        if (!submissionMap[sectionId]) submissionMap[sectionId] = {};
+        const sectionId = sub.section?.toString()
+        if (!sectionId) continue
+        if (!submissionMap[sectionId]) submissionMap[sectionId] = {}
         for (const q of sub.questionair || []) {
-          submissionMap[sectionId][q.question.toString()] = q.ans || [];
+          submissionMap[sectionId][q.question.toString()] = q.ans || []
         }
       }
 
       // 4. Fetch all sections for the plan and user role (from user.role)
-      const userRole = user.role;
+      const userRole = user.role
       const allSections = await Section.find({
         subplan: planId,
-        role: { $in: [userRole.toLowerCase()] }
+        role: { $in: [userRole.toLowerCase()] },
       })
         .populate({
           path: 'questions',
           match: { role: { $in: [userRole.toLowerCase()] } },
-          options: { sort: { no: 1 } }
+          options: { sort: { no: 1 } },
         })
         .sort({ no: 1 })
-        .lean();
+        .lean()
 
       // 5. Build response sections (same as takeSurvey)
       const processedSections = allSections.map((section: any) => {
         const questions = (section.questions || []).map((question: any) => {
-          const ans = (submissionMap[section._id.toString()] && submissionMap[section._id.toString()][question._id.toString()]) || [];
+          const ans =
+            (submissionMap[section._id.toString()] &&
+              submissionMap[section._id.toString()][question._id.toString()]) ||
+            []
 
           // Find the submission for this section
           const sectionSubmission = submissions.find(
             (sub: any) => sub.section?.toString() === section._id.toString()
-          );
+          )
 
           // Find the questionair entry for this question
           const questionairEntry = sectionSubmission?.questionair?.find(
             (q: any) => q.question.toString() === question._id.toString()
-          );
+          )
 
           // For file-type questions, if ans is empty, try to get from questionairEntry.ans
-          let finalAns = ans;
-          if (question.qtype === 'file' && (!ans || ans.length === 0) && questionairEntry && Array.isArray(questionairEntry.ans) && questionairEntry.ans.length > 0) {
-            finalAns = questionairEntry.ans;
+          let finalAns = ans
+          if (
+            question.qtype === 'file' &&
+            (!ans || ans.length === 0) &&
+            questionairEntry &&
+            Array.isArray(questionairEntry.ans) &&
+            questionairEntry.ans.length > 0
+          ) {
+            finalAns = questionairEntry.ans
           }
 
           // Map subQuestions with their answers from the nested structure
-          let subQuestions = [];
+          let subQuestions = []
           if (Array.isArray(question.subQuestions) && question.subQuestions.length > 0) {
             subQuestions = question.subQuestions.map((subQ: any) => {
               // Find the sub-question answer in the nested subQuestions array
@@ -310,29 +346,34 @@ class AdminService {
                 ? questionairEntry.subQuestions.find(
                     (sq: any) => sq.question.toString() === subQ._id.toString()
                   )
-                : undefined;
+                : undefined
               return {
                 ...subQ,
-                ans: subQEntry?.ans || []
-              };
-            });
+                ans: subQEntry?.ans || [],
+              }
+            })
           }
 
           return {
             ...question,
             ans: finalAns,
-            subQuestions
-          };
-        });
+            subQuestions,
+          }
+        })
 
         // Section status logic
-        let sectionStatus = findStatus(section._id.toString(), submissions, section.questions.length, SubmissionStatus);
+        let sectionStatus = findStatus(
+          section._id.toString(),
+          submissions,
+          section.questions.length,
+          SubmissionStatus
+        )
         if (sectionStatus === 'incomplete' || sectionStatus === SubmissionStatus.IN_PROGRESS) {
-          sectionStatus = 'in-progress';
+          sectionStatus = 'in-progress'
         } else if (sectionStatus === SubmissionStatus.COMPLETE) {
-          sectionStatus = 'complete';
+          sectionStatus = 'complete'
         } else if (sectionStatus === SubmissionStatus.NEEDS_IMPROVEMENT) {
-          sectionStatus = 'correction-required';
+          sectionStatus = 'correction-required'
         }
 
         return {
@@ -344,13 +385,15 @@ class AdminService {
           title: section.title,
           updatedAt: section.updatedAt,
           questions,
-          status: sectionStatus
-        };
-      });
+          status: sectionStatus,
+        }
+      })
 
       // Get plan status from user's submission array
-      const userSubmissionForPlan = user.submission?.find((sub: any) => sub.subplan?.toString() === planId.toString());
-      const planStatus = userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress';
+      const userSubmissionForPlan = user.submission?.find(
+        (sub: any) => sub.subplan?.toString() === planId.toString()
+      )
+      const planStatus = userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress'
 
       return {
         success: true,
@@ -361,15 +404,15 @@ class AdminService {
           plan: planId,
           title: planModel.title,
           status: planStatus,
-        }
-      };
+        },
+      }
     } catch (error: any) {
       return {
         success: false,
         statusCode: 500,
         message: error.message || 'Server error',
         data: null,
-      };
+      }
     }
   }
 
@@ -379,28 +422,28 @@ class AdminService {
         { _id: userId, 'submission._id': subID },
         { $set: { 'submission.$.status': status } },
         { new: true }
-      ).select('-password -resetPasswordToken -resetPasswordExpires -hashString');
+      ).select('-password -resetPasswordToken -resetPasswordExpires -hashString')
       if (!user) {
         return {
           success: false,
           statusCode: statusCode.NOTFOUND,
           message: 'User or submission not found',
           data: null,
-        };
+        }
       }
       return {
         success: true,
         statusCode: statusCode.SUCCESS,
         message: 'Submission status updated successfully',
         data: user,
-      };
+      }
     } catch (error: any) {
       return {
         success: false,
         statusCode: statusCode.SERVER_ERROR,
         message: error.message || 'Server error',
         data: null,
-      };
+      }
     }
   }
 }
