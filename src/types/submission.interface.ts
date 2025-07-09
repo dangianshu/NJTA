@@ -1,4 +1,5 @@
 import { Document, Types } from 'mongoose';
+import { IAnswerData } from './question.interface';
 
 export interface IAns {
   type?: number;
@@ -10,6 +11,10 @@ export interface IAns {
 export interface IQuestionairItem {
   question: Types.ObjectId;
   ans: IAns[];
+    subQuestions?: {
+    question: string | Types.ObjectId;
+    ans: IAnswerData[];
+  }[];
 }
 
 export interface ISubmission extends Document {

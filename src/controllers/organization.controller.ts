@@ -86,73 +86,73 @@ class OrganizationController {
     }
   }
 
-  async submitSurvey(req: Request, res: Response) {
-    try {
-      const { sections, plan, status } = req.body
-      const userId = req.user?.id
-      const userRole = req.user?.role
+  // async submitSurvey(req: Request, res: Response) {
+  //   try {
+  //     const { sections, plan, status } = req.body
+  //     const userId = req.user?.id
+  //     const userRole = req.user?.role
 
-      if (!userId || !userRole) {
-        return responseData({
-          res,
-          statusCode: statusCode.UNAUTHORIZED,
-          success: 0,
-          error: 'User not authenticated',
-        })
-      }
+  //     if (!userId || !userRole) {
+  //       return responseData({
+  //         res,
+  //         statusCode: statusCode.UNAUTHORIZED,
+  //         success: 0,
+  //         error: 'User not authenticated',
+  //       })
+  //     }
 
-      // Validate required fields
-      if (!sections || !plan || !status) {
-        return responseData({
-          res,
-          statusCode: statusCode.BAD_REQUEST,
-          success: 0,
-          error: 'Missing required fields: sections, plan, status',
-        })
-      }
+  //     // Validate required fields
+  //     if (!sections || !plan || !status) {
+  //       return responseData({
+  //         res,
+  //         statusCode: statusCode.BAD_REQUEST,
+  //         success: 0,
+  //         error: 'Missing required fields: sections, plan, status',
+  //       })
+  //     }
 
-      if (!Array.isArray(sections) || sections.length === 0) {
-        return responseData({
-          res,
-          statusCode: statusCode.BAD_REQUEST,
-          success: 0,
-          error: 'Sections must be a non-empty array',
-        })
-      }
+  //     if (!Array.isArray(sections) || sections.length === 0) {
+  //       return responseData({
+  //         res,
+  //         statusCode: statusCode.BAD_REQUEST,
+  //         success: 0,
+  //         error: 'Sections must be a non-empty array',
+  //       })
+  //     }
 
-      // Call service with separate parameters (userId, userRole) and payload
-      const result = await organizationService.submitSurvey(userId, userRole, {
-        sections,
-        plan,
-        status
-      })
+  //     // Call service with separate parameters (userId, userRole) and payload
+  //     const result = await organizationService.submitSurvey(userId, userRole, {
+  //       sections,
+  //       plan,
+  //       status
+  //     })
 
-      if (!result.success) {
-        return responseData({
-          res,
-          statusCode: result.statusCode,
-          success: 0,
-          error: result.message,
-        })
-      }
+  //     if (!result.success) {
+  //       return responseData({
+  //         res,
+  //         statusCode: result.statusCode,
+  //         success: 0,
+  //         error: result.message,
+  //       })
+  //     }
 
-      return responseData({
-        res,
-        statusCode: result.statusCode,
-        success: 1,
-        message: result.message,
-        data: result.data,
-      })
-    } catch (error) { 
-      console.error('[OrgController] submitSurvey error:', error)
-      return responseData({
-        res,
-        statusCode: statusCode.SERVER_ERROR,
-        success: 0,
-        error: (error as Error).message,
-      })
-    }
-  }
+  //     return responseData({
+  //       res,
+  //       statusCode: result.statusCode,
+  //       success: 1,
+  //       message: result.message,
+  //       data: result.data,
+  //     })
+  //   } catch (error) { 
+  //     console.error('[OrgController] submitSurvey error:', error)
+  //     return responseData({
+  //       res,
+  //       statusCode: statusCode.SERVER_ERROR,
+  //       success: 0,
+  //       error: (error as Error).message,
+  //     })
+  //   }
+  // }
 
   async submitSubmission(req: Request, res: Response) {
     try {

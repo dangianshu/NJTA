@@ -10,6 +10,7 @@ const router = Router();
 router.post('/users', adminAuthGuard, validate(creationInvitaionValidation), adminController.createInvitation);
 router.put('/users/:id', adminAuthGuard, validate(updateUserValidation), adminController.updateUser);
 router.get('/users', adminAuthGuard,  adminController.getUsers);
-
+router.get('/submissions', adminAuthGuard, adminController.getAllSubmission);
+// router.get('/view/submissions/:plan', adminAuthGuard, adminController.previewSubmissions);
 
 export default router

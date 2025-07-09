@@ -1,0 +1,206 @@
+[
+  {
+    "_id": "686cb8b27b94ea3df04f6d5f",
+    "no": 1,
+    "subplan": "686644c21ee6dd4a3ba1198d",
+    "title": "Organizational Policies and Practices",
+    "questions": [
+      {
+        "_id": "686cb8b37b94ea3df04f6d6d",
+        "no": "1",
+        "optional": false,
+        "options": [],
+        "qtype": "text",
+        "question": "Since the submission of the organization’s last ADA Plan, has the organization made progress in its access efforts?  Did they describe the process of sharing their completed/approved plan with their Board, staff and volunteers?  Q1",
+        "section": "686cb8b27b94ea3df04f6d5f",
+        "subQuestions": [
+          {
+            "question": "Comments",
+            "qtype": "multi-text",
+            "no": 2,
+            "options": [],
+            "_id": "686cb8b37b94ea3df04f6d79",
+            "ans": [
+              {
+                "type": 1,
+                "value": "We have implemented new accessibility features in our facilities including ramps, accessible restrooms, and improved signage.",
+                "no": 1
+              }
+            ]
+          },
+          {
+            "question": "If yes, please describe the progress made in access efforts.",
+            "qtype": "radio",
+            "no": 3,
+            "options": ["Yes", "No"],
+            "_id": "686cb8b37b94ea3df04f6d7a",
+            "ans": [
+              {
+                "type": 1,
+                "value": "Yes",
+                "no": 1
+              }
+            ]
+          },
+          {
+            "question": "What discipline?.",
+            "qtype": "radio-multi",
+            "no": 4,
+            "options": [
+              "Arts Education",
+              "County Arts Agency",
+              "Crafts",
+              "Dance",
+              "Film/Radio"
+            ],
+            "_id": "686cb8b37b94ea3df04f6d7b",
+            "ans": [
+              {
+                "type": 1,
+                "value": "Arts Education, County Arts Agency",
+                "no": 1
+              }
+            ]
+          }
+        ],
+        "ans": [
+          {
+            "type": 1,
+            "value": "We have implemented new accessibility features in our facilities including ramps, accessible restrooms, and improved signage.",
+            "no": 1
+          }
+        ]
+      }
+    ],
+    "status": "In Progress"
+  },
+  {
+    "_id": "686cb8b27b94ea3df04f6d60",
+    "no": 2,
+    "subplan": "686644c21ee6dd4a3ba1198d",
+    "title": "Employment/Volunteer Practices",
+    "questions": [
+      {
+        "_id": "686cb8b37b94ea3df04f6d71",
+        "no": "1",
+        "optional": false,
+        "options": [
+          "Teen Arts",
+          "Lectures/Workshops",
+          "Concerts/Plays/Musicals",
+          "Exhibits",
+          "Docent tours",
+          "Poetry/Play Readings",
+          "Outdoor events",
+          "Film"
+        ],
+        "qtype": "checkbox",
+        "question": "Please indicate the types of events your organization offers. Check all that apply.",
+        "section": "686cb8b27b94ea3df04f6d60",
+        "subQuestions": [
+          {
+            "question": "18 Year Olds and Younger",
+            "qtype": "checkbox",
+            "no": 2,
+            "options": ["Yes", "No"],
+            "_id": "686cb8b37b94ea3df04f6d85",
+            "ans": [
+              {
+                "type": 1,
+                "value": "Yes",
+                "no": 1
+              }
+            ]
+          },
+          {
+            "question": "Which role you want to play",
+            "qtype": "select",
+            "no": 3,
+            "options": ["Volunteer", "Staff", "Board Member"],
+            "_id": "686cb8b37b94ea3df04f6d86",
+            "ans": [
+              {
+                "type": 1,
+                "value": "Volunteer",
+                "no": 1
+              }
+            ]
+          }
+        ],
+        "ans": [
+          {
+            "type": 1,
+            "value": "We offer a variety of events including Teen Arts, Lectures/Workshops, Concerts/Plays/Musicals, Exhibits, Docent tours, Poetry/Play Readings, Outdoor events, and Film.",
+            "no": 1
+          }
+        ]
+      }
+    ],
+    "status": "In Progress"
+  },
+  {
+    "_id": "686cb8b27b94ea3df04f6d61",
+    "no": 3,
+    "subplan": "686644c21ee6dd4a3ba1198d",
+    "title": "Program Practices",
+    "questions": [
+      {
+        "_id": "686cb8b37b94ea3df04f6d75",
+        "no": "1",
+        "optional": false,
+        "options": [],
+        "qtype": "file",
+        "question": "If yes, upload your policy here.",
+        "section": "686cb8b27b94ea3df04f6d61",
+        "subQuestions": [
+          {
+            "question": "write your policy here",
+            "qtype": "textarea",
+            "no": 2,
+            "options": [],
+            "_id": "686cb8b37b94ea3df04f6d8d",
+            "ans": [
+              {
+                "type": 1,
+                "value": "We have a comprehensive policy that outlines our commitment to accessibility and inclusion in all our programs and services.",
+                "no": 1
+              }
+            ]
+          },
+          {
+            "question": "Which date you have join.",
+            "qtype": "date",
+            "no": 3,
+            "options": [],
+            "_id": "686cb8b37b94ea3df04f6d8e",
+            "ans": [
+              {
+                "type": 1,
+                "value": "2025-07-08",
+                "no": 1
+              }
+            ]
+          },
+          {
+            "question": "If yes, please upload your policy here.",
+            "qtype": "date-range",
+            "no": 4,
+            "options": [],
+            "_id": "686cb8b37b94ea3df04f6d8f",
+            "ans": []
+          },
+          {
+            "question": "If yes, please upload your policy here.",
+            "qtype": "file",
+            "no": 5,
+            "options": [],
+            "_id": "686cb8b37b94ea3df04f6d90",
+            "ans": []
+          }
+        ],
+        "ans": []
+      }
+    ],
+    "status": "In Progress"
+  }
+]

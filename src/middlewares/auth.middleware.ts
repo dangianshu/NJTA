@@ -3,7 +3,7 @@ import { statusCode } from '../utils/statusCode';
 import { responseData, responseMessage } from '../helper/response';
 import { NextFunction, Request, Response } from 'express';
 import { verifyJWTToken } from '../helper/jwt';
-import { UserRole } from '../utils/constante';
+import { UserRole } from '../utils/constant';
 
 // Extend Request interface to include user
 declare global {

@@ -11,6 +11,8 @@ import { getRoleByCode, generateCustomPassword, getTypeByCode } from '../helper/
 import mailTemplateService from './email.template.service'
 import { IUser } from '../types/user.interface'
 import { IPagination } from '../types/common.interface'
+import SubmissionPlan from '../models/SubmissionPlan.models'
+
 
 class AdminService {
   async createInvitation(userData: IinvaiteRequest): Promise<IAuthResponse> {
@@ -122,7 +124,7 @@ class AdminService {
     type: string
   ): Promise<IServiceResponse<IUserPaginatedResponse>> {
     const { page = 1, limit = 10 } = pagination
-    const query: any = { email: { $ne: null } };
+    const query: any = { email: { $ne: null } }
 
     if (type) {
       query.role = type
@@ -159,6 +161,157 @@ class AdminService {
       },
     }
   }
+
+  async getAllSubmission(
+    role: string = '',
+    pagination: IPagination,
+    fy: string = '',
+    search: string = ''
+  ): Promise<IServiceResponse<IUserPaginatedResponse>> {
+    const { page = 1, limit = 10 } = pagination;
+    const skip = (page - 1) * limit;
+  
+    // 1. Get all submission plans (no sorting)
+    const plans = await SubmissionPlan.find({});
+  
+    // 2. Build query
+    const query: any = {};
+  
+    if (fy) {
+      const fyPlan = await SubmissionPlan.findOne({ title: fy });
+      if (fyPlan) {
+        query['submission.subplan'] = fyPlan._id;
+      }
+    }
+  
+    if (role && role !== 'null') {
+      query.code = {
+        ...(role === 'evaluator' && { $regex: 'EVAL' }),
+        ...(role !== 'evaluator' && { $not: /EVAL/i }),
+      };
+    }
+  
+      if (search?.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { name: { $regex: searchRegex } },
+      ];
+    }
+  
+    const users = await User.find(query)
+    .populate({
+      path: 'submission.subplan',
+      model: 'SubmissionPlan',
+    })
+     .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+        .skip(skip)
+        .limit(limit)
+  
+    const filteredUsers = users.filter(user => Array.isArray(user.submission) && user.submission.length > 0);
+  
+    return {
+      success: true,
+      statusCode: statusCode.SUCCESS,
+      message: 'Submissions fetched successfully',
+      data: {
+        users: filteredUsers,
+        pagination: {
+          page,
+          limit,
+          total: filteredUsers.length, 
+        },
+      },
+    };
+  }
+
+
+  // async getPreviewSubmissions(planId: string, userId: string) {
+  //     const submissions = await Submission.find({
+  //       user: userId,
+  //       subplan: planId,
+  //     })
+  //       .populate({ path: 'questionair.question' })
+  //       .lean()
+
+  //     // 2. Get user and plan
+  //     const userModel = await User.findById(userId)
+  //     const planModel = await SubmissionPlan.findById(planId)
+  //     if (!userModel || !planModel) {
+  //       return {
+  //         success: false,
+  //         statusCode: 404,
+  //         message: 'User or Plan not found',
+  //       }
+  //     }
+  //     // 3. Get sections for plan and user role
+  //     let sections = await Section.find({
+  //       subplan: planId,
+  //       role: { $in: [userModel.role?.toLowerCase()] },
+  //     })
+  //       .sort({ no: 1 })
+  //       .populate([
+  //         {
+  //           path: 'questions',
+  //           match: { role: { $in: [userModel.role?.toLowerCase()] } },
+  //           options: { sort: { no: 1 } },
+  //         },
+  //       ])
+  //       .lean()
+  //     // 4. Get all questions for these sections and user role
+  //     let allQuestions = await Question.find({
+  //       section: { $in: sections.map((sec: any) => sec._id) },
+  //       role: { $in: [userModel.role?.toLowerCase()] },
+  //     })
+  //       .sort({ no: 1 })
+  //       .lean()
+  //     // 5. Calculate status for each section
+  //     sections = sections.map((section: any) => {
+  //       let sectionQuestions = allQuestions.filter(
+  //         (q: any) => q.section.toString() === section._id.toString()
+  //       )
+  //       return {
+  //         ...section,
+  //         status: findStatus(
+  //           section._id,
+  //           submissions,
+  //           sectionQuestions.length,
+  //           SubmissionStatus
+  //         ),
+  //       }
+  //     })
+  //     // 6. Attach answers to each question
+  //     allQuestions = allQuestions.map((question: any) => {
+  //       let ans = []
+  //       for (const submission of submissions) {
+  //         if (submission.section?.toString() === question.section.toString()) {
+  //           const qair = submission.questionair.find(
+  //             (q: any) => q.question.toString() === question._id.toString()
+  //           )
+  //           if (qair) {
+  //             ans = qair.ans || []
+  //             break
+  //           }
+  //         }
+  //       }
+  //       return {
+  //         ...question,
+  //         ans,
+  //       }
+  //     })
+  //     return {
+  //       success: true,
+  //       statusCode: 200,
+  //       message: 'Preview data fetched successfully',
+  //       data: {
+  //         sections,
+  //         allQuestions,
+  //         // previews, // Uncomment if you implement reorder
+  //         user: userId,
+  //         plan: planId,
+  //         planTitle: planModel.title,
+  //       },
+  //     }
+  // }
 }
 
 const adminService = new AdminService()

@@ -6,6 +6,7 @@ import route from './routes/index'
 import { logUrl } from './middlewares/url-logger.middleware'
 import { connectDB } from './config/db.config'
 import { globalErrorHandler } from './middlewares/global-error-handler.middleware'
+import path from 'path'
 
 const app: Application = express()
 app.disable('x-powered-by')
@@ -38,6 +39,9 @@ app.get('/status', (req: Request, res: Response) => {
 })
 
 app.use(globalErrorHandler)
+
+// Serve uploads at /uploads
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')))
 
 connectDB().then(() => {
   bootstrap()

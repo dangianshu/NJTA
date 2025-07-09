@@ -1,12 +1,12 @@
 import mongoose, { Schema } from 'mongoose';
 import { ISubmission } from '../types/submission.interface';
-import { SubmissionStatus } from '../utils/constante';
+import { SubmissionStatus } from '../utils/constant';
 
 const AnsSchema = new Schema(
   {
     type: { type: Number, default: 1 }, 
     text: String,
-    value: String,
+    value: Schema.Types.Mixed,
     no: Number,
   },
 );

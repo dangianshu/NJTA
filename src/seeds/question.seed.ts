@@ -6,23 +6,26 @@ import Section from "../models/Section.models"
 export const questionSeedData = [
   {
     "options": [],
-    "optional": true,
+    "optional": false,
     "qtype": "text",
     "subQuestions": [
       {
         "question": "Comments",
+        "optional": true,
         "qtype": "multi-text",
         "no": 2,
         "options": []
       },
       {
         "question": "If yes, please describe the progress made in access efforts.",
-        "qtype": "redio",
+        "optional": true,
+        "qtype": "radio",
         "no": 3,
         "options": ["Yes", "No"]
       },
       {
         "question": "What discipline?.",
+        "optional": true,
         "qtype": "radio-multi",
         "no": 4,
         "options": [  
@@ -55,14 +58,22 @@ export const questionSeedData = [
     "subQuestions": [
       {
         "question": "18 Year Olds and Younger",
+        "optional": true,
         "qtype": "checkbox",
         "no": 2,
         "options": ["Yes", "No"]
       },
+      {
+        "question": "Which role you want to play",
+        "optional": false,
+        "qtype": "select",
+        "no": 3,
+        "options": ["Volunteer", "Staff", "Board Member"]
+      }
     ],
     "role": ["user"],
-    "sectionNo": 1,
-    "no": "2",
+    "sectionNo": 2,
+    "no": "1",
     "question": "Please indicate the types of events your organization offers. Check all that apply."
   },
   {
@@ -73,13 +84,35 @@ export const questionSeedData = [
     "subQuestions": [
       {
         "question": "write your policy here",
+        "optional": true,
         "qtype": "textarea",
         "no": 2,
         "options": []
       },
+      {
+        "question": "Which date you have join.",
+        "optional": false,
+        "qtype": "date",
+        "no": 3,
+        "options": []
+      },
+      {
+        "question": "If yes, please upload your policy here.",
+        "optional": true,
+        "qtype": "date-range",
+        "no": 4,
+        "options": []
+      },
+      {
+        "question": "If yes, please upload your policy here.",
+        "optional": true,
+        "qtype": "file",
+        "no": 5,
+        "options": []
+      }
     ],
     "role": ["user"],
-    "sectionNo": 2,
+    "sectionNo": 3,
     "no": "1",
     "question": "If yes, upload your policy here."
   },

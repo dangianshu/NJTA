@@ -17,36 +17,42 @@ const storage = multer.diskStorage({
 
 export const upload = multer({ storage });
 
-export function injectFileAnswersToSections(sections: any[], fileMapByQuestion: Record<string, any>, filesByName: Record<string, any>) {
+export function injectFileAnswersToSections(
+  sections: any[],
+  fileMapByQuestion: Record<string, any>,
+  filesByName: Record<string, any>
+) {
   for (const section of sections) {
     for (const question of section.questions || []) {
-      // Main question (qtype: file)
-      if (question.qtype === 'file' && fileMapByQuestion[question._id]) {
-        const fileMeta = fileMapByQuestion[question._id];
-        const file = filesByName[fileMeta.file_name];
+      const qId = question._id.toString();
+
+      if (question.qtype === 'file') {
+        const fileMeta = fileMapByQuestion[qId];
+        const file = fileMeta && filesByName[fileMeta.file_name];
         if (file) {
-          // Store file URL in ans array
           question.ans = [{
-            type: 1, // or use appropriate type
+            type: 1,
             value: `/uploads/${file.filename}`,
-            no: 1
+            no: 1,
           }];
         }
       }
-      // SubQuestions
+
       for (const subQ of question.subQuestions || []) {
-        if (subQ.qtype === 'file' && fileMapByQuestion[subQ._id]) {
-          const fileMeta = fileMapByQuestion[subQ._id];
-          const file = filesByName[fileMeta.file_name];
+        const subQId = subQ._id.toString();
+        if (subQ.qtype === 'file') {
+          const fileMeta = fileMapByQuestion[subQId];
+          const file = fileMeta && filesByName[fileMeta.file_name];
           if (file) {
             subQ.ans = [{
               type: 1,
               value: `/uploads/${file.filename}`,
-              no: 1
+              no: 1,
             }];
-          }
+          } 
         }
       }
     }
   }
 }
+

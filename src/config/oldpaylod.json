@@ -1,0 +1,160 @@
+[
+    {
+      "_id": "686644c81ee6dd4a3ba119a3",
+      "no": 1,
+      "subplan": "686644c21ee6dd4a3ba1198d",
+      "title": "Organizational Policies and Practices",
+      "questions": [
+        {
+          "_id": "686644c91ee6dd4a3ba119a9",
+          "no": "1",
+          "optional": true,
+          "options": [],
+          "qtype": "text",
+          "question": "Since the submission of the organization's last ADA Plan, has the organization made progress in its access efforts?",
+          "section": "686644c81ee6dd4a3ba119a3",
+          "subQuestions": [
+             {
+                "question": "Comments",
+                "qtype": "multi-text",
+                "no": 2,
+                "options": [],
+                "_id": "686644c91ee6dd4a3ba119af",
+                "ans": [
+                  {
+                    "type": 1,
+                    "value": "We have implemented new accessibility features in our facilities including ramps, accessible restrooms, and improved signage.",
+                    "no": 1
+                  }
+                ]
+             },
+             {
+                "question": "If yes, please describe the progress made in access efforts.",
+                "qtype": "radio",
+                "no": 3,
+                "options": [
+                    "Yes",
+                    "No"
+                ],
+                "_id": "686644c91ee6dd4a3ba119b0",
+                "ans": [
+                  {
+                    "type": 1,
+                    "value": "Yes",
+                    "no": 1
+                  }
+                ]
+             },
+             {
+                "question": "What discipline?.",
+                "qtype": "radio-multi",
+                "no": 4,
+                "options": [
+                    "Arts Education",
+                    "County Arts Agency",
+                    "Crafts",
+                    "Dance",
+                    "Film/Radio"
+                ],
+                "_id": "686644c91ee6dd4a3ba119b1",
+                "ans": [
+                  {
+                    "type": 2,
+                    "value": "Arts Education,Dance,Film/Radio",
+                    "no": 1
+                  }
+                ]
+             }
+          ],
+          "ans": [
+            {
+              "type": 1,
+              "value": "Yes, we have made significant progress in our accessibility efforts over the past year.",
+              "no": 1
+            }
+          ]
+        },
+        {
+          "_id": "686644c91ee6dd4a3ba119aa",
+          "no": "2",
+          "optional": false,
+          "options": [
+                "Teen Arts",
+                "Lectures/Workshops",
+                "Concerts/Plays/Musicals",
+                "Exhibits",
+                "Docent tours",
+                "Poetry/Play Readings",
+                "Outdoor events",
+                "Film"
+            ],
+            "qtype": "checkbox",
+            "question": "Please indicate the types of events your organization offers. Check all that apply.",
+            "section": "686644c81ee6dd4a3ba119a3",
+            "subQuestions": [
+                {
+                    "question": "18 Year Olds and Younger",
+                    "qtype": "checkbox",
+                    "no": 2,
+                    "options": [
+                        "Yes",
+                        "No"
+                    ],
+                    "_id": "686644c91ee6dd4a3ba119b2",
+                    "ans": [
+                      {
+                        "type": 3,
+                        "value": "Yes",
+                        "no": 1
+                      }
+                    ]
+                }
+            ],
+            "updatedAt": "2025-07-03T08:52:25.123Z",
+            "ans": [
+              {
+                "type": 3,
+                "value": "Teen Arts,Lectures/Workshops,Concerts/Plays/Musicals,Exhibits",
+                "no": 1
+              }
+            ]
+        }
+       ],
+      "status": "In Progress"
+    },
+    {
+    "_id": "686644c81ee6dd4a3ba119a4",
+    "no": 2,
+    "subplan": "686644c21ee6dd4a3ba1198d",
+    "title": "Employment/Volunteer Practices",
+    "questions": [
+        {
+            "_id": "686644c91ee6dd4a3ba119ad",
+            "no": "1",
+            "optional": false,
+            "options": [],
+            "qtype": "file",
+            "question": "If yes, upload your policy here.",
+            "section": "686644c81ee6dd4a3ba119a4",
+            "subQuestions": [
+                {
+                    "question": "write your policy here",
+                    "qtype": "textarea",
+                    "no": 2,
+                    "options": [],
+                    "_id": "686644c91ee6dd4a3ba119b7",
+                    "ans": [
+                      {
+                        "type": 1,
+                        "value": "Our organization follows comprehensive accessibility policies that ensure equal opportunity employment and volunteer practices. We provide reasonable accommodations for all staff and volunteers with disabilities and maintain an inclusive work environment.",
+                        "no": 1
+                      }
+                    ]
+                }
+            ],
+            "ans": []
+        }
+    ],
+    "status": "In Progress"
+    }
+  ]

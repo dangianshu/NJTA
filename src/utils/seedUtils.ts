@@ -1,5 +1,3 @@
-import mongoose from 'mongoose'
-
 export interface SeedResult {
   collection: string
   count: number

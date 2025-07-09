@@ -1,12 +1,13 @@
 import mongoose, { Schema } from 'mongoose';
 import { IUser } from '../types/user.interface';
-import { UserRole } from '../utils/constante';
+import { UserRole, SubmissionStatus } from '../utils/constant';
 
 
 const submissionSchema = new Schema({
   status: {
     type: String,
-    default: 'draft',
+    default: SubmissionStatus.DRAFT, 
+    enum: Object.values(SubmissionStatus),
   },
   submitted: {
     type: Boolean,

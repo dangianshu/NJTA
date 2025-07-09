@@ -4,7 +4,7 @@ import Section from '../models/Section.models'
 import Question from '../models/Question.models'
 import Submission from '../models/Submission.models'
 import { statusCode } from '../utils/statusCode'
-import { SubmissionStatus } from '../utils/constante'
+import { SubmissionStatus } from '../utils/constant'
 import { IServiceResponse } from '../types/auth.interface'
 import { ISubmissionViewData, ISubmitQuestionData, IAnswerData, IDashboardPaginatedResponse, ISubmitSurveyPayload, ISubmitSurveyData } from '../types/question.interface'
 import { IPagination } from '../types/common.interface'
@@ -44,7 +44,7 @@ class OrganizationService {
     }
     
     if (answeredQuestions === totalQuestions) {
-      return SubmissionStatus.COMPLETED
+      return SubmissionStatus.COMPLETE
     } else if (answeredQuestions > 0) {
       return SubmissionStatus.IN_PROGRESS
     }
@@ -59,7 +59,7 @@ class OrganizationService {
     )
 
     return {
-      status: userSubmissionForPlan ? userSubmissionForPlan.status : 'In Progress',
+      status: userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress',
       pdfLink: userSubmissionForPlan ? userSubmissionForPlan.pdfLink : null
     }
   }
@@ -117,115 +117,143 @@ class OrganizationService {
   }
 
   async takeSurvey(userId: string, planId: string, userRole: string): Promise<IServiceResponse<any>> {
-      const user = await User.findById(userId)
-      console.log('user', user)
-      if (!user) {
-        return {
-          success: false,
-          statusCode: statusCode.NOTFOUND,
-          message: 'User not found',
-          data: {}
-        }
+    // Fetch user and plan
+    const user = await User.findById(userId);
+    if (!user) {
+      return {
+        success: false,
+        statusCode: statusCode.NOTFOUND,
+        message: 'User not found',
+        data: {}
+      };
+    }
+
+    const planModel = await SubmissionPlan.findById(planId);
+    if (!planModel) {
+      return {
+        success: false,
+        statusCode: statusCode.NOTFOUND,
+        message: 'Plan not found',
+        data: {}
+      };
+    }
+
+    // Fetch all submissions for this user and plan
+    const submissions = await Submission.find({
+      subplan: planId,
+      user: userId
+    }).lean();
+
+    // Build a map: { [sectionId]: { [questionId]: ans[] } }
+    const submissionMap: Record<string, Record<string, any[]>> = {};
+    for (const sub of submissions) {
+      const sectionId = sub.section?.toString();
+      if (!sectionId) continue;
+      if (!submissionMap[sectionId]) submissionMap[sectionId] = {};
+      for (const q of sub.questionair || []) {
+        submissionMap[sectionId][q.question.toString()] = q.ans || [];
       }
+    }
 
-      // Get plan details to include title
-      const planModel = await SubmissionPlan.findById(planId)
-      console.log('planModel', planModel)
-      if (!planModel) {
-        return {
-          success: false,
-          statusCode: statusCode.NOTFOUND,
-          message: 'Plan not found',
-          data: {}
+    // Fetch all sections for the plan and user role
+    const allSections = await Section.find({
+      subplan: planId,
+      role: { $in: [userRole.toLowerCase()] }
+    })
+      .populate({
+        path: 'questions',
+        match: { role: { $in: [userRole.toLowerCase()] } },
+        options: { sort: { no: 1 } }
+      })
+      .sort({ no: 1 })
+      .lean();
+
+    // Build response sections
+    const processedSections = allSections.map((section: any) => {
+      const questions = (section.questions || []).map((question: any) => {
+        const ans = (submissionMap[section._id.toString()] && submissionMap[section._id.toString()][question._id.toString()]) || [];
+
+        // Find the submission for this section
+        const sectionSubmission = submissions.find(
+          (sub: any) => sub.section?.toString() === section._id.toString()
+        );
+
+        // Find the questionair entry for this question
+        const questionairEntry = sectionSubmission?.questionair?.find(
+          (q: any) => q.question.toString() === question._id.toString()
+        );
+
+        // For file-type questions, if ans is empty, try to get from questionairEntry.ans
+        let finalAns = ans;
+        if (question.qtype === 'file' && (!ans || ans.length === 0) && questionairEntry && Array.isArray(questionairEntry.ans) && questionairEntry.ans.length > 0) {
+          finalAns = questionairEntry.ans;
         }
+
+        // Map subQuestions with their answers from the nested structure
+        let subQuestions = [];
+        if (Array.isArray(question.subQuestions) && question.subQuestions.length > 0) {
+          subQuestions = question.subQuestions.map((subQ: any) => {
+            // Find the sub-question answer in the nested subQuestions array
+            const subQEntry = Array.isArray(questionairEntry?.subQuestions)
+              ? questionairEntry.subQuestions.find(
+                  (sq: any) => sq.question.toString() === subQ._id.toString()
+                )
+              : undefined;
+            return {
+              ...subQ,
+              ans: subQEntry?.ans || []
+            };
+          });
+        }
+
+        return {
+          ...question,
+          ans: finalAns,
+          subQuestions
+        };
+      });
+
+      // Section status logic
+      let sectionStatus = this.findStatus(section._id.toString(), submissions, section.questions.length);
+      if (sectionStatus === 'incomplete' || sectionStatus === SubmissionStatus.IN_PROGRESS) {
+        sectionStatus = 'in-progress';
+      } else if (sectionStatus === SubmissionStatus.COMPLETE) {
+        sectionStatus = 'complete';
+      } else if (sectionStatus === SubmissionStatus.NEEDS_IMPROVEMENT) {
+        sectionStatus = 'correction-required';
       }
-
-      const submissions = await Submission.find({
-        subplan: planId,
-        user: userId
-      })
-        .populate('questionair.question')
-        .lean()
-
-        console.log('submissions', submissions)
-
-      // Get all sections for the plan and user role
-      const allSections = await Section.find({
-        subplan: planId,
-        role: { $in: [userRole.toLowerCase()] }
-      })
-        .populate({
-          path: 'questions',
-          match: { role: { $in: [userRole.toLowerCase()] } },
-          options: { sort: { no: 1 } }
-        })
-        .sort({ no: 1 })
-        .lean()
-
-        console.log('allSections', allSections)
-
-      // Process sections with questions and answers
-      const processedSections = allSections.map((section: any) => {
-        console.log("---:",section)
-        const questions = section.questions.map((question: any) => {
-          console.log('----::question', question)
-          const answers = this.findAnswers(section._id.toString(), question._id.toString(), submissions)
-          console.log('-----:::answers', answers)
-          return {
-            ...question,
-            ans: answers
-          }
-        })
-
-        // Determine section status
-        let sectionStatus = this.findStatus(section._id.toString(), submissions, section.questions.length)
-        console.log('sectionStatus', sectionStatus)
-
-        if (sectionStatus === 'incomplete') {
-          sectionStatus = 'In Progress'
-        } else if (sectionStatus === SubmissionStatus.IN_PROGRESS) {
-          sectionStatus = 'In Progress'
-        } else if (sectionStatus === SubmissionStatus.COMPLETED) {
-          sectionStatus = 'Completed'
-        } else if (sectionStatus === SubmissionStatus.NEEDS_IMPROVEMENT) {
-          sectionStatus = 'Correction Required'
-        }
-
-        return {
-          _id: section._id,
-          no: section.no,
-          subplan: section.subplan,
-          role: section.role,
-          createdAt: section.createdAt,
-          title: section.title,
-          updatedAt: section.updatedAt,
-          questions,
-          status: sectionStatus
-        }
-      })
-        console.log('processedSections',processedSections)
-
-
-      // Get plan status from user's submission array using common helper function
-      const { status: planStatus } = this.getPlanStatusFromUserSubmission(user.submission || [], planId)
 
       return {
-        success: true,
-        statusCode: statusCode.SUCCESS,
-        message: 'Survey data retrieved successfully',
-        data: {
-          sections: processedSections,
-          plan: planId,
-          title: planModel.title,
-          status: planStatus,
-        }
+        _id: section._id,
+        no: section.no,
+        subplan: section.subplan,
+        role: section.role,
+        createdAt: section.createdAt,
+        title: section.title,
+        updatedAt: section.updatedAt,
+        questions,
+        status: sectionStatus
+      };
+    });
+
+    // Get plan status from user's submission array
+    const { status: planStatus } = this.getPlanStatusFromUserSubmission(user.submission || [], planId);
+
+    return {
+      success: true,
+      statusCode: statusCode.SUCCESS,
+      message: 'Survey data retrieved successfully',
+      data: {
+        sections: processedSections,
+        plan: planId,
+        title: planModel.title,
+        status: planStatus,
       }
-    
+    };
   }
 
   async submitSurvey(userId: string, userRole: string, payload: ISubmitSurveyData): Promise<IServiceResponse<any>> {
     try {
-      // Check if payload exists and is an object
       if (!payload || typeof payload !== 'object') {
         return {
           success: false,
@@ -421,7 +449,7 @@ class OrganizationService {
             // Don't change status if it was marked for improvement
             // Keep the existing status unless all questions are answered
             if (answeredQuestions === totalQuestions) {
-              submission.status = SubmissionStatus.COMPLETED
+              submission.status = SubmissionStatus.COMPLETE
             }
             // Otherwise keep NEEDS_IMPROVEMENT status
           } else {
@@ -431,7 +459,7 @@ class OrganizationService {
               submission.status = SubmissionStatus.IN_PROGRESS
             } else if (answeredQuestions === totalQuestions) {
               // All questions answered - mark as completed
-              submission.status = SubmissionStatus.COMPLETED
+              submission.status = SubmissionStatus.COMPLETE
             } else {
               // Partially answered - mark as in progress
               submission.status = SubmissionStatus.IN_PROGRESS
@@ -470,7 +498,7 @@ class OrganizationService {
       const completedSectionsForPlan = await Submission.countDocuments({
         user: userId,
         subplan: plan,
-        status: SubmissionStatus.COMPLETED
+        status: SubmissionStatus.COMPLETE
       })
 
       let overallPlanStatus: string
@@ -488,7 +516,7 @@ class OrganizationService {
       } else {
         // For other statuses, determine based on completion
         if (completedSectionsForPlan === allSectionsForPlan) {
-          overallPlanStatus = SubmissionStatus.COMPLETED
+          overallPlanStatus = SubmissionStatus.COMPLETE
         } else if (completedSectionsForPlan > 0) {
           overallPlanStatus = SubmissionStatus.IN_PROGRESS
         } else {
@@ -499,7 +527,7 @@ class OrganizationService {
       const submissionEntry: any = {
         subplan: plan,
         status: overallPlanStatus,
-        submitted: [SubmissionStatus.SUBMITTED, SubmissionStatus.COMPLETED].includes(overallPlanStatus as SubmissionStatus),
+        submitted: [SubmissionStatus.SUBMITTED, SubmissionStatus.COMPLETE].includes(overallPlanStatus as SubmissionStatus),
         submissionDate: new Date(),
         pdfLink: ""
       }
@@ -590,7 +618,6 @@ class OrganizationService {
     }
   }
 
-  // Helper function to validate submission payload
   private validateSubmissionPayload(payload: ISubmitSurveyData): { isValid: boolean; message?: string } {
     const { sections, plan, status } = payload
 
@@ -656,7 +683,7 @@ class OrganizationService {
     const completedSections = await Submission.countDocuments({
       user: userId,
       subplan: plan,
-      status: SubmissionStatus.COMPLETED
+      status: SubmissionStatus.COMPLETE
     })
 
     const completionPercentage = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0
@@ -668,122 +695,131 @@ class OrganizationService {
     }
   }
 
-  async submitSubmissionWithFiles(req: any) {
-    try {
-      // Parse form-data fields
-      console.log('[OrganizationService] submitSubmissionWithFiles - req.body:', req.body);
-      const { plan, status } = req.body;
-      // Get user ID from token (set by verifyToken middleware)
-      const userId = req.user && req.user.id ? req.user.id : undefined;
-      let sections = req.body.sections;
-      let file_map = req.body.file_map;
-      if (!plan || !userId || !status || !sections) {
-        return {
-          success: false,
-          statusCode: statusCode.BAD_REQUEST,
-          message: 'Missing required fields',
-        };
-      }
-      // Parse JSON fields
-      if (typeof sections === 'string') sections = JSON.parse(sections);
-      if (typeof file_map === 'string') file_map = JSON.parse(file_map);
-      // Map file_map by questionId
-      const fileMapByQuestion: Record<string, any> = {};
-      (file_map || []).forEach((f: any) => {
-        fileMapByQuestion[f.questionId] = f;
+
+async submitSubmissionWithFiles(req: any) {
+  try {
+    const { plan, status } = req.body;
+    const userId = req.user?.id;
+    let sections = req.body.sections;
+    let file_map = req.body.fileMap;
+
+    if (!plan || !userId || !status || !sections) {
+      return {
+        success: false,
+        statusCode: statusCode.BAD_REQUEST,
+        message: 'Missing required fields',
+      };
+    }
+
+    if (typeof sections === 'string') sections = JSON.parse(sections);
+    if (typeof file_map === 'string') file_map = JSON.parse(file_map);
+
+
+    const fileMapByQuestion = Object.fromEntries(
+      (file_map || []).map((f: any) => [f.questionId.toString(), f])
+    );
+    const filesByName = Object.fromEntries(
+      (req.files || []).map((file: any) => [file.originalname, file])
+    );
+
+    injectFileAnswersToSections(sections, fileMapByQuestion, filesByName);
+
+    const submissionIds: any[] = [];
+
+    for (const section of sections) {
+
+      const questionair = (section.questions || []).map((q: any) => ({
+        question: q._id,
+        ans: q.ans || [],
+        subQuestions: (q.subQuestions || []).map((subQ: any) => ({
+          question: subQ._id,
+          ans: subQ.ans || [],
+        })),
+      }));
+
+
+      let submission = await Submission.findOne({
+        user: userId,
+        section: section._id,
+        subplan: plan,
       });
-      // Map uploaded files by originalname
-      const filesByName: Record<string, any> = {};
-      (req.files || []).forEach((file: any) => {
-        filesByName[file.originalname] = file;
-      });
-      // Inject file answers into questions/subQuestions (qtype: file)
-      injectFileAnswersToSections(sections, fileMapByQuestion, filesByName);
-      // For each section, create or update Submission
-      const submissionIds: any[] = [];
-      for (const section of sections) {
-        const questionair = (section.questions || []).map((q: any) => ({
-          question: q._id,
-          ans: q.ans || [],
-          subQuestions: (q.subQuestions || []).map((subQ: any) => ({
-            question: subQ._id,
-            ans: subQ.ans || []
-          }))
-        }));
-        // Upsert Submission for user+section+plan
-        let submission = await Submission.findOne({
+
+      if (submission) {
+        submission.status = section.status || status;
+        submission.questionair = questionair;
+        await submission.save();
+      } else {
+        submission = await Submission.create({
           user: userId,
           section: section._id,
           subplan: plan,
+          status: section.status || status,
+          questionair,
         });
-        if (submission) {
-          submission.status = section.status || status; // Store section status in Submission
-          submission.questionair = questionair;
-          await submission.save();
-        } else {
-          submission = await Submission.create({
-            user: userId,
-            section: section._id,
-            subplan: plan,
-            status: section.status || status,
-            questionair,
-          });
-        }
-        submissionIds.push(submission._id);
       }
-      // Update User's submission array (main status)
-      const userDoc = await User.findById(userId);
-      if (!userDoc) {
-        return {
-          success: false,
-          statusCode: statusCode.NOTFOUND,
-          message: 'User not found',
-        };
-      }
-      let updated = false;
-      const planIdStr = plan.toString();
-      if (!userDoc.submission) userDoc.submission = [];
-      let found = false;
-      for (const sub of userDoc.submission) {
-        if (sub.subplan && sub.subplan.toString() === planIdStr) {
-          sub.status = status;
-          if (typeof status === 'string' && status.trim().toLowerCase() === 'submitted') {
-            sub.submitted = true;
-            sub.submissionDate = new Date();
-          } else {
-            sub.submitted = false;
-            sub.submissionDate = undefined;
-          }
-          found = true;
-          updated = true;
-        }
-      }
-      if (!found) {
-        userDoc.submission.push({
-          subplan: plan,
-          status,
-          submitted: typeof status === 'string' && status.trim().toLowerCase() === 'submitted',
-          pdfLink: '',
-          submissionDate: (typeof status === 'string' && status.trim().toLowerCase() === 'submitted') ? new Date() : undefined,
-        } as any); // 'as any' to satisfy TS for embedded subdoc
-        updated = true;
-      }
-      if (updated) await userDoc.save();
-      return {
-        success: true,
-        statusCode: statusCode.SUCCESS,
-        message: 'Submission saved successfully',
-        data: { submissionIds },
-      };
-    } catch (error: any) {
-      console.error('[OrganizationService] submitSubmissionWithFiles error:', error);
+
+      submissionIds.push(submission._id);
+    }
+
+
+    const userDoc = await User.findById(userId);
+    if (!userDoc) {
       return {
         success: false,
-        statusCode: statusCode.SERVER_ERROR,
-        message: error.message || 'Server error',
+        statusCode: statusCode.NOTFOUND,
+        message: 'User not found',
       };
     }
+
+    const planIdStr = plan.toString();
+    if (!userDoc.submission) userDoc.submission = [];
+
+    let found = false;
+    for (const sub of userDoc.submission) {
+      if (sub.subplan?.toString() === planIdStr) {
+        sub.status = status;
+        if (typeof status === 'string' && status.trim().toLowerCase() === 'submitted') {
+          sub.submitted = true;
+          sub.submissionDate = new Date();
+        } else {
+          sub.submitted = false;
+          sub.submissionDate = undefined;
+        }
+        found = true;
+      }
+    }
+
+    if (!found) {
+      userDoc.submission.push({
+        subplan: plan,
+        status,
+        submitted: typeof status === 'string' && status.trim().toLowerCase() === 'submitted',
+        pdfLink: '',
+        submissionDate:
+          typeof status === 'string' && status.trim().toLowerCase() === 'submitted'
+            ? new Date()
+            : undefined,
+      } as any);
+    }
+
+    await userDoc.save();
+
+    return {
+      success: true,
+      statusCode: statusCode.SUCCESS,
+      message: 'Submission saved successfully',
+      data: { submissionIds },
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      statusCode: statusCode.SERVER_ERROR,
+      message: error.message || 'Server error',
+    };
   }
+}
+
+
 }
 
 const organizationService = new OrganizationService()
