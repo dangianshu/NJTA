@@ -4,7 +4,7 @@ const answerSchema = Joi.object({
   type: Joi.number().optional().default(1),
   text: Joi.string().optional().allow(''),
   value: Joi.string().optional().allow(''),
-  no: Joi.number().optional()
+  no: Joi.number().optional(),
 })
 
 const questionSchema = Joi.object({
@@ -17,7 +17,7 @@ const questionSchema = Joi.object({
   role: Joi.array().items(Joi.string()).optional(),
   section: Joi.string().required(),
   subQuestions: Joi.array().optional(),
-  ans: Joi.array().items(answerSchema).optional().default([])
+  ans: Joi.array().items(answerSchema).optional().default([]),
 })
 
 const sectionSchema = Joi.object({
@@ -27,11 +27,11 @@ const sectionSchema = Joi.object({
   role: Joi.array().items(Joi.string()).optional(),
   title: Joi.string().required(),
   questions: Joi.array().items(questionSchema).required(),
-  status: Joi.string().optional()
+  status: Joi.string().optional(),
 })
 
 export const submitSurveyValidation = Joi.object({
   sections: Joi.array().items(sectionSchema).min(1).required(),
   plan: Joi.string().required(),
-  status: Joi.string().required()
+  status: Joi.string().required(),
 })

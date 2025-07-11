@@ -1,6 +1,5 @@
-import mongoose, { Schema } from 'mongoose';
-import { ISection } from '../types/section.interface';
-
+import mongoose, { Schema } from 'mongoose'
+import { ISection } from '../types/section.interface'
 
 const SectionSchema = new Schema<ISection>(
   {
@@ -24,15 +23,13 @@ const SectionSchema = new Schema<ISection>(
     toObject: { virtuals: true },
     toJSON: { virtuals: true },
   }
-
-);
+)
 
 SectionSchema.virtual('questions', {
   ref: 'Question',
   localField: '_id',
   foreignField: 'section',
-});
+})
 
-
-const Section = mongoose.model<ISection>('Section', SectionSchema);
-export default Section;
+const Section = mongoose.model<ISection>('Section', SectionSchema)
+export default Section

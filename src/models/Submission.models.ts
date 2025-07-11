@@ -1,15 +1,13 @@
-import mongoose, { Schema } from 'mongoose';
-import { ISubmission } from '../types/submission.interface';
-import { SubmissionStatus } from '../utils/constant';
+import mongoose, { Schema } from 'mongoose'
+import { ISubmission } from '../types/submission.interface'
+import { SubmissionStatus } from '../utils/constant'
 
-const AnsSchema = new Schema(
-  {
-    type: { type: Number, default: 1 }, 
-    text: String,
-    value: Schema.Types.Mixed,
-    no: Number,
-  },
-);
+const AnsSchema = new Schema({
+  type: { type: Number, default: 1 },
+  text: String,
+  value: Schema.Types.Mixed,
+  no: Number,
+})
 
 const SubmissionSchema = new Schema<ISubmission>(
   {
@@ -29,6 +27,14 @@ const SubmissionSchema = new Schema<ISubmission>(
           type: Schema.Types.ObjectId,
           ref: 'Question',
         },
+        needImprovement: {
+          type: Boolean,
+          default: false,
+        },
+        comment: {
+          type: String,
+          default: '',
+        },
         ans: [AnsSchema],
         subQuestions: [
           {
@@ -36,9 +42,17 @@ const SubmissionSchema = new Schema<ISubmission>(
               type: Schema.Types.ObjectId,
               ref: 'Question',
             },
+            needImprovement: {
+              type: Boolean,
+              default: false,
+            },
+            comment: {
+              type: String,
+              default: '',
+            },
             ans: [AnsSchema],
-          }
-        ]
+          },
+        ],
       },
     ],
     user: {
@@ -57,7 +71,7 @@ const SubmissionSchema = new Schema<ISubmission>(
     toObject: { virtuals: true },
     toJSON: { virtuals: true },
   }
-);
+)
 
-const Submission = mongoose.model<ISubmission>('Submission', SubmissionSchema);
-export default Submission;
+const Submission = mongoose.model<ISubmission>('Submission', SubmissionSchema)
+export default Submission

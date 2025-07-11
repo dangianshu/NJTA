@@ -1,5 +1,4 @@
-import { ISendInvitation } from "../types/email.interface"
-
+import { ISendInvitation } from '../types/email.interface'
 
 class SendInvitationTemplate {
   sendInvitation(body: ISendInvitation) {

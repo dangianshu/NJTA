@@ -1,6 +1,7 @@
 import SubmissionPlan from '../models/SubmissionPlan.models'
 import { statusCode } from '../utils/statusCode'
 import { ISubmissionPlan, ISubmissionResponse } from '../types/submissionPlan.interface'
+import { toPlainObject } from '../helper/common'
 
 class SubmissionPlanService {
   async getAllPlans(): Promise<ISubmissionResponse> {
@@ -21,13 +22,7 @@ class SubmissionPlanService {
   }
 
   async updatePlan(id: string, payload: Partial<ISubmissionPlan>) {
-    console.log(`Updating plan with ID: ${id}`, payload)
-    const plan = await SubmissionPlan.findByIdAndUpdate(
-      id,
-      { $set: payload },
-      { new: true }
-    )
-    console.log(`Updated plan:`, plan)
+    const plan = await SubmissionPlan.findByIdAndUpdate(id, { $set: payload }, { new: true })
     if (!plan) {
       return {
         success: false,
@@ -35,14 +30,12 @@ class SubmissionPlanService {
         message: 'Submission plan not found',
       }
     }
-    const planObj = plan.toObject()
-    console.log(`Plan object after update:`, planObj)
     return {
       success: true,
       statusCode: statusCode.SUCCESS,
       message: 'Submission plan updated successfully',
       data: {
-        plan: planObj,
+        plan: await toPlainObject(plan),
       },
     }
   }

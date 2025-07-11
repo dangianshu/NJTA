@@ -46,13 +46,7 @@
             "question": "What discipline?.",
             "qtype": "radio-multi",
             "no": 4,
-            "options": [
-              "Arts Education",
-              "County Arts Agency",
-              "Crafts",
-              "Dance",
-              "Film/Radio"
-            ],
+            "options": ["Arts Education", "County Arts Agency", "Crafts", "Dance", "Film/Radio"],
             "_id": "686cb8b37b94ea3df04f6d7b",
             "ans": [
               {

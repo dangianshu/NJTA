@@ -1,13 +1,18 @@
 import { NextFunction, Request, RequestHandler, Response } from 'express'
 import { CustomError } from '../types/types'
 
-export const apiHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>): RequestHandler =>
-    async (req, res, next) => {
-      Promise.resolve(fn(req, res, next)).catch(next);
-    };
+export const apiHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>): RequestHandler =>
+  async (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next)
+  }
 
-export const globalErrorHandler = (err: CustomError, req: Request , res: Response, next:NextFunction) => {
-
+export const globalErrorHandler = (
+  err: CustomError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const statusCode = err.statusCode || 500
   const errorResponse = {
     message: err.message || 'Internal Server Error',

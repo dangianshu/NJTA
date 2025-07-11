@@ -27,9 +27,8 @@ export interface IResponseAndCount<T> {
 }
 
 export interface JWTPayload {
-  id: string;
-  email: string;
-  role: string;
-  name?: string; 
+  id: string
+  email: string
+  role: string
+  name?: string
 }
-

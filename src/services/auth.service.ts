@@ -10,7 +10,7 @@ import { getRoleByCode } from '../helper/common'
 
 class AuthService {
   async register(userData: IRegisterRequest): Promise<IAuthResponse> {
-    const { name, email, password, contact, code, redirectUrl} = userData
+    const { name, email, password, contact, code, redirectUrl } = userData
 
     const existingUser = await User.findOne({ code })
 
@@ -52,10 +52,10 @@ class AuthService {
     existingUser.hashString = hashString
 
     const mailBody = {
-      email: existingUser.email|| '',
+      email: existingUser.email || '',
       name: existingUser.name || '',
       token: existingUser.hashString,
-      redirect_url: redirectUrl || 'http://192.168.0.34:3000/verify-email', 
+      redirect_url: redirectUrl || 'http://192.168.0.34:3000/verify-email',
     }
 
     await mailTemplateService.sendEmailVerificationMail(mailBody)
@@ -100,7 +100,7 @@ class AuthService {
       }
     }
 
-    if(!user.isVerified) {
+    if (!user.isVerified) {
       return {
         success: false,
         statusCode: statusCode.UNAUTHORIZED,
@@ -219,7 +219,7 @@ class AuthService {
     }
 
     user.isVerified = true
-    user.hashString = undefined 
+    user.hashString = undefined
     await user.save()
 
     return {

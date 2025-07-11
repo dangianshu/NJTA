@@ -25,7 +25,6 @@ export const creationInvitaionValidation = Joi.object({
     'string.uri': 'Please provide a valid URL',
     'any.required': 'Redirect URL is required',
   }),
-  
 })
 
 export const updateUserValidation = Joi.object({

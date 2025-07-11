@@ -1,3 +1,5 @@
+import path from 'path'
+import fs from 'fs'
 import User from '../models/User.models'
 import { encrypt } from '../helper/encrypt'
 import { statusCode } from '../utils/statusCode'
@@ -7,23 +9,30 @@ import {
   IServiceResponse,
   IUserPaginatedResponse,
 } from '../types/auth.interface'
-import {
-  getRoleByCode,
-  generateCustomPassword,
-  getTypeByCode,
-  findStatus,
-  getUserRoleById,
-} from '../helper/common'
+import { getRoleByCode, generateCustomPassword, getTypeByCode, findStatus } from '../helper/common'
 import mailTemplateService from './email.template.service'
 import { IUser } from '../types/user.interface'
 import { IPagination } from '../types/common.interface'
 import SubmissionPlan from '../models/SubmissionPlan.models'
 import Submission from '../models/Submission.models'
 import Section from '../models/Section.models'
-import Question from '../models/Question.models'
 import { SubmissionStatus } from '../utils/constant'
+import {
+  generateHtmlTemplate,
+  generatePdfFromHtml,
+  generateDocxFromSections,
+} from '../utils/pdf.generator'
 
 class AdminService {
+
+  private findStatus(sectionId: string, submissions: any[]): string {
+    const submission = submissions.find((sub: any) => sub.section?.toString() === sectionId)
+
+    if (!submission) return SubmissionStatus.IN_PROGRESS
+
+    return submission.status || SubmissionStatus.IN_PROGRESS
+  }
+
   async createInvitation(userData: IinvaiteRequest): Promise<IAuthResponse> {
     const { name, email, contact, code, redirectUrl } = userData
     const existingUser = await User.findOne({ code })
@@ -183,16 +192,7 @@ class AdminService {
     // 1. Get all submission plans (no sorting)
     const plans = await SubmissionPlan.find({})
 
-    // 2. Build query
     const query: any = {}
-
-    // if (fy) {
-    //   const fyPlan = await SubmissionPlan.findOne({ title: fy })
-    //   console.log("🚀 ~ AdminService ~ fyPlan:", fyPlan?._id)
-    //   if (fyPlan) {
-    //     query['submission.subplan'] = fyPlan._id
-    //   }
-    // }
 
     if (fy) {
       const fyPlan = await SubmissionPlan.findOne({ title: fy })
@@ -309,6 +309,10 @@ class AdminService {
 
       // 5. Build response sections (same as takeSurvey)
       const processedSections = allSections.map((section: any) => {
+        const sectionSubmission = submissions.find(
+          (sub: any) => sub.section?.toString() === section._id.toString()
+        )
+
         const questions = (section.questions || []).map((question: any) => {
           const ans =
             (submissionMap[section._id.toString()] &&
@@ -350,6 +354,8 @@ class AdminService {
               return {
                 ...subQ,
                 ans: subQEntry?.ans || [],
+                comment: subQEntry?.comment || '',
+                needimprovement: subQEntry?.needImprovement || false,
               }
             })
           }
@@ -357,24 +363,15 @@ class AdminService {
           return {
             ...question,
             ans: finalAns,
+            comment: questionairEntry?.comment || '',
+            needImprovement: questionairEntry?.needImprovement || false,
             subQuestions,
           }
         })
 
         // Section status logic
-        let sectionStatus = findStatus(
-          section._id.toString(),
-          submissions,
-          section.questions.length,
-          SubmissionStatus
-        )
-        if (sectionStatus === 'incomplete' || sectionStatus === SubmissionStatus.IN_PROGRESS) {
-          sectionStatus = 'in-progress'
-        } else if (sectionStatus === SubmissionStatus.COMPLETE) {
-          sectionStatus = 'complete'
-        } else if (sectionStatus === SubmissionStatus.NEEDS_IMPROVEMENT) {
-          sectionStatus = 'correction-required'
-        }
+        let sectionStatus = this.findStatus(section._id.toString(), submissions)
+
 
         return {
           _id: section._id,
@@ -386,6 +383,7 @@ class AdminService {
           updatedAt: section.updatedAt,
           questions,
           status: sectionStatus,
+          submissionId: sectionSubmission?._id || null,
         }
       })
 
@@ -416,13 +414,14 @@ class AdminService {
     }
   }
 
-  async updateSubmissionStatus(userId: string, subID: string, status: string) {
+  async updateSubmissionStatus(planId: string, userId: string, status: string) {
     try {
       const user = await User.findOneAndUpdate(
-        { _id: userId, 'submission._id': subID },
+        { _id: userId, 'submission._id': planId },
         { $set: { 'submission.$.status': status } },
         { new: true }
       ).select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+      console.log('user: ', user)
       if (!user) {
         return {
           success: false,
@@ -442,6 +441,130 @@ class AdminService {
         success: false,
         statusCode: statusCode.SERVER_ERROR,
         message: error.message || 'Server error',
+        data: null,
+      }
+    }
+  }
+
+  async getPreviewExport(planId: string, userId: string, format: string) {
+    const user = await User.findById(userId)
+    if (!user) {
+      return { success: false, statusCode: 404, message: 'User not found', data: null }
+    }
+
+    const planModel = await SubmissionPlan.findById(planId)
+    if (!planModel) {
+      return { success: false, statusCode: 404, message: 'Plan not found', data: null }
+    }
+
+    const submissions = await Submission.find({ subplan: planId, user: userId }).lean()
+
+    const submissionMap: Record<string, Record<string, any[]>> = {}
+    for (const sub of submissions) {
+      const sectionId = sub.section?.toString()
+      if (!sectionId) continue
+      if (!submissionMap[sectionId]) submissionMap[sectionId] = {}
+      for (const q of sub.questionair || []) {
+        submissionMap[sectionId][q.question.toString()] = q.ans || []
+      }
+    }
+
+    const userRole = user.role
+    const allSections = await Section.find({
+      subplan: planId,
+      role: { $in: [userRole.toLowerCase()] },
+    })
+      .populate({
+        path: 'questions',
+        match: { role: { $in: [userRole.toLowerCase()] } },
+        options: { sort: { no: 1 } },
+      })
+      .sort({ no: 1 })
+      .lean()
+
+    const processedSections = allSections.map((section: any) => {
+      const questions = (section.questions || []).map((question: any) => {
+        const ans = submissionMap[section._id.toString()]?.[question._id.toString()] || []
+
+        const sectionSubmission = submissions.find(
+          (sub) => sub.section?.toString() === section._id.toString()
+        )
+        const questionairEntry = sectionSubmission?.questionair?.find(
+          (q) => q.question.toString() === question._id.toString()
+        )
+
+        let finalAns = ans
+        if (
+          question.qtype === 'file' &&
+          (!ans || ans.length === 0) &&
+          questionairEntry?.ans?.length
+        ) {
+          finalAns = questionairEntry.ans
+        }
+
+        const subQuestions = (question.subQuestions || []).map((subQ: any) => {
+          const subQEntry = questionairEntry?.subQuestions?.find(
+            (sq: any) => sq.question.toString() === subQ._id.toString()
+          )
+          return {
+            ...subQ,
+            ans: subQEntry?.ans || [],
+            qtype: subQ.qtype, // Make sure qtype is included
+          }
+        })
+
+        return {
+          ...question,
+          ans: finalAns,
+          subQuestions,
+          qtype: question.qtype, // Make sure qtype is included
+        }
+      })
+
+      return {
+        _id: section._id,
+        no: section.no,
+        subplan: section.subplan,
+        role: section.role,
+        createdAt: section.createdAt,
+        title: section.title,
+        updatedAt: section.updatedAt,
+        questions,
+        status: 'in-progress',
+      }
+    })
+
+    // Generate unique filename with timestamp
+    const timestamp = Date.now()
+    const fileName = `submission-preview-${timestamp}.${format}`
+    const uploadsDir = path.join(__dirname, '../../public/uploads')
+    const filePath = path.join(uploadsDir, fileName)
+
+    try {
+      // Ensure uploads directory exists
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true })
+      }
+
+      if (format === 'pdf') {
+        const html = generateHtmlTemplate(processedSections)
+        await generatePdfFromHtml(html, filePath)
+      } else {
+        await generateDocxFromSections(processedSections, filePath)
+      }
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: `${format.toUpperCase()} generated successfully`,
+        data: { url: `/uploads/${fileName}` },
+      }
+    } catch (error) {
+      console.error('Error generating export:', error)
+      return {
+        success: false,
+        statusCode: 500,
+        message: `Failed to generate ${format.toUpperCase()}`,
         data: null,
       }
     }

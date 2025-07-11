@@ -10,7 +10,6 @@ import path from 'path'
 
 const app: Application = express()
 app.disable('x-powered-by')
-     
 
 app.use(
   cors({
@@ -22,7 +21,6 @@ app.use(
 )
 
 app.use(bodyParser.urlencoded({ limit: '500mb', extended: false }))
-
 
 // parse application/json
 app.use(bodyParser.json({ limit: '500mb' }))
@@ -47,9 +45,7 @@ connectDB().then(() => {
   bootstrap()
 })
 
-
 const bootstrap = async () => {
-
   // Process handlers for uncaught exceptions and unhandled rejections
   process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error)
@@ -59,7 +55,6 @@ const bootstrap = async () => {
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason)
-
   })
 
   try {

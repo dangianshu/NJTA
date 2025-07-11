@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi from 'joi'
 
 export const updatePlanValidation = Joi.object({
   reSubmissionDate: Joi.date().required().messages({
@@ -21,4 +21,4 @@ export const updatePlanValidation = Joi.object({
     'any.required': 'regularSubmissionEndDate is required',
     'date.base': 'regularSubmissionEndDate must be a valid date',
   }),
-});
+})

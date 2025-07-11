@@ -9,6 +9,11 @@ router.get('/dashboard', verifyToken, organizationController.getDashboard)
 
 router.get('/take/survey/:planID', verifyToken, organizationController.takeSurvey)
 
-router.post('/submit/submission', verifyToken, upload.array('files'), organizationController.submitSubmission)
+router.post(
+  '/submit/submission',
+  verifyToken,
+  upload.array('files'),
+  organizationController.submitSubmission
+)
 
 export default router

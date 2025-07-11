@@ -189,9 +189,9 @@ class AdminController {
 
   async updateSubmissionStatus(req: Request, res: Response) {
     try {
-      const { user, subID } = req.params
+      const { plan, user } = req.params
       const { status } = req.query
-      if (!user || !subID || !status) {
+      if (!plan || !user || !status) {
         return responseData({
           res,
           statusCode: statusCode.BAD_REQUEST,
@@ -199,7 +199,7 @@ class AdminController {
           error: 'Missing user, subID, or status',
         })
       }
-      const result = await adminService.updateSubmissionStatus(user, subID, String(status))
+      const result = await adminService.updateSubmissionStatus(plan, user, String(status))
       if (!result.success) {
         return responseData({
           res,
@@ -217,6 +217,50 @@ class AdminController {
       })
     } catch (error) {
       console.error('[AdminController] updateSubmissionStatus error: ', error)
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      })
+    }
+  }
+
+  async getPreviewExport(req: Request, res: Response) {
+    try {
+      const { plan, user } = req.params
+      const format = req.query.format as string
+      console.log('format: ', format)
+
+      if (!plan || !user) {
+        return responseData({
+          res,
+          statusCode: statusCode.BAD_REQUEST,
+          success: 0,
+          error: 'Missing plan or user',
+        })
+      }
+
+      const result = await adminService.getPreviewExport(plan, user, format)
+
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        })
+      }
+
+      return responseData({
+        res,
+        statusCode: result.statusCode,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      })
+    } catch (error) {
+      console.error('[AdminController] getPreviewExport error: ', error)
       return responseData({
         res,
         statusCode: statusCode.SERVER_ERROR,

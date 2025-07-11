@@ -1,43 +1,23 @@
 import { Request, Response } from 'express'
+import adminService from '../services/admin.service'
 import { responseData } from '../helper/response'
 import { statusCode } from '../utils/statusCode'
-import submissionPlanService from '../services/submissionPlan.service'
+import evaluatorService from '../services/evaluator.service'
 
-class SubmissionPlanController {
-  async getAllPlans(req: Request, res: Response) {
+class EvaluatorController {
+  async getAllSubmission(req: Request, res: Response) {
     try {
-      const result = await submissionPlanService.getAllPlans()
-      if (!result.success) {
-        return responseData({
-          res,
-          statusCode: result.statusCode,
-          success: 0,
-          error: result.message,
-        })
+      const { role, page = 1, limit = 10, fy, search } = req.query
+      const pagination = {
+        page: Number(page),
+        limit: Number(limit),
       }
-      return responseData({
-        res,
-        statusCode: statusCode.SUCCESS,
-        success: 1,
-        message: result.message,
-        data: result.data,
-      })
-    } catch (error) {
-      console.error('[SubmissionPlanController] getAllPlans error: ', error)
-      return responseData({
-        res,
-        statusCode: statusCode.SERVER_ERROR,
-        success: 0,
-        error: (error as Error).message,
-      })
-    }
-  }
-
-  async updatePlan(req: Request, res: Response) {
-    try {
-      const { id } = req.params
-      console.log(`Updating plan with ID: ${id}`, req.body)
-      const result = await submissionPlanService.updatePlan(id, req.body)
+      const result = await adminService.getAllSubmission(
+        role as string,
+        pagination,
+        fy as string,
+        search as string
+      )
       if (!result.success) {
         return responseData({
           res,
@@ -54,7 +34,44 @@ class SubmissionPlanController {
         data: result.data,
       })
     } catch (error) {
-      console.error('[SubmissionPlanController] getAllPlans error: ', error)
+      console.error('[AdminController] getAllSubmission error: ', error)
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      })
+    }
+  }
+
+  async addFeedbackToSubmission(req: Request, res: Response) {
+    try {
+      const { submissionId } = req.params
+      const { questionId, isSubQuestion, comment, needImprovement } = req.body
+      const result = await evaluatorService.addFeedbackToSubmission({
+        submissionId,
+        questionId,
+        isSubQuestion,
+        comment,
+        needImprovement,
+      })
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        })
+      }
+      return responseData({
+        res,
+        statusCode: result.statusCode,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      })
+    } catch (error) {
+      console.error('[AdminController] addFeedbackToSubmission error: ', error)
       return responseData({
         res,
         statusCode: statusCode.SERVER_ERROR,
@@ -65,4 +82,5 @@ class SubmissionPlanController {
   }
 }
 
-export default new SubmissionPlanController()
+const evaluatorController = new EvaluatorController()
+export default evaluatorController

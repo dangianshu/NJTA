@@ -1,11 +1,11 @@
-import  User  from '../models/User.models'
-import bcrypt from 'bcrypt';
+import User from '../models/User.models'
+import bcrypt from 'bcrypt'
 
 export const seedUsers = async () => {
   try {
     // Drop the collection to remove old indexes
     await User.collection.drop().catch(() => console.log('Collection does not exist yet'))
-    
+
     // Clear any remaining documents
     await User.deleteMany({})
 
@@ -133,7 +133,7 @@ export const seedUsers = async () => {
         role: 'admin',
         isVerified: true,
         submission: [],
-      }
+      },
     ]
 
     // Insert all users
@@ -143,7 +143,7 @@ export const seedUsers = async () => {
         user.password = await bcrypt.hash(user.password, 10)
       }
     }
-    
+
     await User.insertMany(allUsers)
 
     console.log(`✅ Seeded users successfully:`)
@@ -157,4 +157,3 @@ export const seedUsers = async () => {
     throw error
   }
 }
-

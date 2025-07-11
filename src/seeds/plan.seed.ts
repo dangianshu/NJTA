@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose'
 import SubmissionPlan from '../models/SubmissionPlan.models'
 
@@ -14,7 +13,7 @@ export const submissionPlanSeedData = [
     title: 'FY 2024-2026',
     dueDate: new Date('2025-05-01T00:00:00.000Z'),
     reSubmissionDate: new Date('2023-07-01T00:00:00.000Z'),
-  }
+  },
   // {
   //   _id: new mongoose.Types.ObjectId(),
   //   title: 'FY 2024-2026',
@@ -44,7 +43,7 @@ export const submissionPlanSeedData = [
 export async function seedSubmissionPlans() {
   try {
     // Use bulk operations for better performance
-    const bulkOps = submissionPlanSeedData.map(plan => ({
+    const bulkOps = submissionPlanSeedData.map((plan) => ({
       updateOne: {
         filter: { _id: plan._id },
         update: { $set: plan },
@@ -54,12 +53,17 @@ export async function seedSubmissionPlans() {
 
     if (bulkOps.length > 0) {
       await SubmissionPlan.bulkWrite(bulkOps)
-      console.log(`✅ ${submissionPlanSeedData.length} submission plans inserted/updated successfully.`)
+      console.log(
+        `✅ ${submissionPlanSeedData.length} submission plans inserted/updated successfully.`
+      )
     }
 
     return submissionPlanSeedData
   } catch (error) {
-    console.error("❌ Error seeding submission plans:", error instanceof Error ? error.message : error)
+    console.error(
+      '❌ Error seeding submission plans:',
+      error instanceof Error ? error.message : error
+    )
     throw error
   }
 }

@@ -10,7 +10,6 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-
 export const sendMail = async (data: MailData): Promise<boolean> => {
   const mailOptions = {
     from: `NJTA <${CONFIG.ADMIN_EMAIL}>`,

@@ -1,54 +1,54 @@
-import { IPagination } from "./common.interface";
-import { IUser } from "./user.interface";
+import { IPagination } from './common.interface'
+import { IUser } from './user.interface'
 
 export interface IRegisterRequest {
-  name: string;
-  email: string;
-  password: string;
-  contact: string;
-  code: string;
+  name: string
+  email: string
+  password: string
+  contact: string
+  code: string
 }
 export interface ILoginRequest {
-  code: string;
-  password: string;
+  code: string
+  password: string
 }
 
 export interface IAuthResponse {
-  success: boolean;
-  statusCode: number;
-  message: string;
+  success: boolean
+  statusCode: number
+  message: string
   data?: {
-    user?: IUser;
-    token?: string;
-  };
+    user?: IUser
+    token?: string
+  }
 }
 
-export interface IRegisterRequest {                                                 
-  name: string;
-  email: string;
-  password: string;
-  password2: string;
-  contactName: string;
-  code: string;
-  redirectUrl?: string;
+export interface IRegisterRequest {
+  name: string
+  email: string
+  password: string
+  password2: string
+  contactName: string
+  code: string
+  redirectUrl?: string
 }
 
 export interface IinvaiteRequest {
-  name: string;
-  email: string;
-  contact: string;
-  code: string;
-  redirectUrl?: string;
-}  
+  name: string
+  email: string
+  contact: string
+  code: string
+  redirectUrl?: string
+}
 
 export interface IUserPaginatedResponse {
-  users: IUser[];
+  users: IUser[]
   pagination: IPagination
 }
 
 export interface IServiceResponse<T> {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  data: T;
+  success: boolean
+  statusCode: number
+  message: string
+  data: T
 }

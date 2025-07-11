@@ -13,11 +13,11 @@ export interface ISendForgotPassword {
 }
 
 export interface ISendInvitation {
-  name: string;
-  email: string;
-  code: string;
-  password: string;
-  redirectUrl?: string;
+  name: string
+  email: string
+  code: string
+  password: string
+  redirectUrl?: string
   role: string
 }
 

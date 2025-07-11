@@ -7,28 +7,28 @@ const SubmissionPlanSchema = new Schema<ISubmissionPlan>(
       type: String,
       required: true,
     },
-    dueDate: { 
+    dueDate: {
       type: Date,
       required: false,
     },
-    reSubmissionDate: { 
-      type: Date ,
+    reSubmissionDate: {
+      type: Date,
       required: false,
     },
-    evaluationStartDate: { 
-      type: Date ,
+    evaluationStartDate: {
+      type: Date,
       required: false,
     },
-    evaluationEndDate: { 
-      type: Date ,
+    evaluationEndDate: {
+      type: Date,
       required: false,
     },
-    regularSubmissionStartDate: { 
-      type: Date ,
+    regularSubmissionStartDate: {
+      type: Date,
       required: false,
     },
-    regularSubmissionEndDate: { 
-      type: Date ,
+    regularSubmissionEndDate: {
+      type: Date,
       required: false,
     },
   },
