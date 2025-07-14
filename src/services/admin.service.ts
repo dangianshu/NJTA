@@ -180,79 +180,91 @@ class AdminService {
     }
   }
 
-  async getAllSubmission(
-    role: string = '',
-    pagination: IPagination,
-    fy: string = '',
-    search: string = ''
-  ): Promise<IServiceResponse<IUserPaginatedResponse>> {
-    const { page = 1, limit = 10 } = pagination
-    const skip = (page - 1) * limit
+async getAllSubmission(
+  role: string = '',
+  pagination: IPagination,
+  fy: string = '',
+  search: string = ''
+): Promise<IServiceResponse<IUserPaginatedResponse>> {
+  const { page = 1, limit = 10 } = pagination;
+  const skip = (page - 1) * limit;
 
-    // 1. Get all submission plans (no sorting)
-    const plans = await SubmissionPlan.find({})
+  // 1. Get all submission plans (no sorting)
+  const plans = await SubmissionPlan.find({});
 
-    const query: any = {}
+  const query: any = {};
 
-    if (fy) {
-      const fyPlan = await SubmissionPlan.findOne({ title: fy })
-      if (fyPlan) {
-        query.submission = {
-          $elemMatch: {
-            subplan: fyPlan._id,
-            status: { $ne: SubmissionStatus.DRAFT },
-          },
-        }
-      }
-    }
-
-    if (role && role !== 'null') {
-      query.code = {
-        ...(role === 'evaluator' && { $regex: 'EVAL' }),
-        ...(role !== 'evaluator' && { $not: /EVAL/i }),
-      }
-    }
-
-    if (search?.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i')
-      query.$or = [{ name: { $regex: searchRegex } }]
-    }
-
-    const users = await User.find(query)
-      .populate({
-        path: 'submission.subplan',
-        model: 'SubmissionPlan',
-      })
-      .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
-      .skip(skip)
-      .limit(limit)
-
-    // Remove draft submissions from each user
-    const filteredUsers = users
-      .map((user) => {
-        if (!Array.isArray(user.submission)) return user
-        user.submission = user.submission.filter(
-          (sub) => sub.status !== SubmissionStatus.DRAFT && sub.status !== 'draft'
-        )
-        return user
-      })
-      // Only include users with at least one non-draft submission
-      .filter((user) => Array.isArray(user.submission) && user.submission.length > 0)
-
-    return {
-      success: true,
-      statusCode: statusCode.SUCCESS,
-      message: 'Submissions fetched successfully',
-      data: {
-        users: filteredUsers,
-        pagination: {
-          page,
-          limit,
-          total: filteredUsers.length,
+  // 2. Filter by financial year plan (FY)
+  if (fy) {
+    const fyPlan = await SubmissionPlan.findOne({ title: fy });
+    if (fyPlan) {
+      query.submission = {
+        $elemMatch: {
+          subplan: fyPlan._id,
+          status: { $ne: SubmissionStatus.DRAFT },
         },
-      },
+      };
     }
+  } else {
+    // Default filter to only include users with at least one non-draft submission
+    query.submission = {
+      $elemMatch: {
+        status: { $ne: SubmissionStatus.DRAFT },
+      },
+    };
   }
+
+  // 3. Filter by role
+  if (role && role !== 'null') {
+    query.code = {
+      ...(role === 'evaluator' && { $regex: 'EVAL' }),
+      ...(role !== 'evaluator' && { $not: /EVAL/i }),
+    };
+  }
+
+  // 4. Filter by search keyword
+  if (search?.trim()) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+    query.$or = [{ name: { $regex: searchRegex } }];
+  }
+
+  // 5. Fetch users with submissions
+  const users = await User.find(query)
+    .populate({
+      path: 'submission.subplan',
+      model: 'SubmissionPlan',
+    })
+    .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+    .skip(skip)
+    .limit(limit);
+
+  // 6. Remove draft submissions from each user
+  const filteredUsers = users
+    .map((user) => {
+      if (!Array.isArray(user.submission)) return user;
+      user.submission = user.submission.filter(
+        (sub) => sub.status !== SubmissionStatus.DRAFT && sub.status !== 'draft'
+      );
+      return user;
+    })
+    .filter((user) => Array.isArray(user.submission) && user.submission.length > 0);
+
+  // 7. Prepare response
+  return {
+    success: true,
+    statusCode: statusCode.SUCCESS,
+    message: 'Submissions fetched successfully',
+    data: {
+      users: filteredUsers,
+      pagination: {
+        page,
+        limit,
+        total: filteredUsers.length,
+      },
+    },
+  };
+}
+
 
   async getPreviewSubmissions(planId: string, userId: string) {
     try {
@@ -355,7 +367,7 @@ class AdminService {
                 ...subQ,
                 ans: subQEntry?.ans || [],
                 comment: subQEntry?.comment || '',
-                needimprovement: subQEntry?.needImprovement || false,
+                needImprovement: subQEntry?.needImprovement || false,
               }
             })
           }
@@ -415,7 +427,6 @@ class AdminService {
   }
 
   async updateSubmissionStatus(planId: string, userId: string, status: string) {
-    try {
       const user = await User.findOneAndUpdate(
         { _id: userId, 'submission._id': planId },
         { $set: { 'submission.$.status': status } },
@@ -436,14 +447,7 @@ class AdminService {
         message: 'Submission status updated successfully',
         data: user,
       }
-    } catch (error: any) {
-      return {
-        success: false,
-        statusCode: statusCode.SERVER_ERROR,
-        message: error.message || 'Server error',
-        data: null,
-      }
-    }
+   
   }
 
   async getPreviewExport(planId: string, userId: string, format: string) {
@@ -540,7 +544,6 @@ class AdminService {
     const uploadsDir = path.join(__dirname, '../../public/uploads')
     const filePath = path.join(uploadsDir, fileName)
 
-    try {
       // Ensure uploads directory exists
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true })
@@ -559,16 +562,8 @@ class AdminService {
         message: `${format.toUpperCase()} generated successfully`,
         data: { url: `/uploads/${fileName}` },
       }
-    } catch (error) {
-      console.error('Error generating export:', error)
-      return {
-        success: false,
-        statusCode: 500,
-        message: `Failed to generate ${format.toUpperCase()}`,
-        data: null,
-      }
-    }
   }
+  
 }
 
 const adminService = new AdminService()

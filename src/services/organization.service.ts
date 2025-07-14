@@ -190,7 +190,7 @@ class OrganizationService {
               ...subQ,
               ans: subQEntry?.ans || [],
               comment: subQEntry?.comment || '',
-              needimprovement: subQEntry?.needImprovement || false,
+              needImprovement: subQEntry?.needImprovement || false,
             }
           })
         }
@@ -673,9 +673,13 @@ class OrganizationService {
         const questionair = (section.questions || []).map((q: any) => ({
           question: q._id,
           ans: q.ans || [],
+          needImprovement: q.needImprovement ?? undefined,
+          comment: q.comment ?? undefined,
           subQuestions: (q.subQuestions || []).map((subQ: any) => ({
             question: subQ._id,
             ans: subQ.ans || [],
+            needImprovement: subQ.needImprovement ?? undefined,
+            comment: subQ.comment ?? undefined,
           })),
         }))
 
@@ -752,6 +756,7 @@ class OrganizationService {
       }
 
   }
+
 }
 
 const organizationService = new OrganizationService()

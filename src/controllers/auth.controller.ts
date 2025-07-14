@@ -160,6 +160,7 @@ class AuthController {
       })
     }
   }
+  
 }
 
 const authController = new AuthController()

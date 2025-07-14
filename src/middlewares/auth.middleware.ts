@@ -35,7 +35,6 @@ const commonValidation = async (req: Request, res: Response, token: string) => {
 export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { authorization } = req.headers
-    console.log('authorization: ', authorization)
 
     if (!authorization) {
       return responseData({

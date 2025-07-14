@@ -17,6 +17,19 @@ const storage = multer.diskStorage({
 
 export const upload = multer({ storage })
 
+
+
+function deleteOldFileIfExists(filePath: string) {
+  if (!filePath) return
+
+  const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+  const fullPath = path.join(__dirname, '../../public', relativePath)
+
+  if (fs.existsSync(fullPath)) {
+    fs.unlinkSync(fullPath)
+  }
+}
+
 export function injectFileAnswersToSections(
   sections: any[],
   fileMapByQuestion: Record<string, any>,
@@ -29,7 +42,13 @@ export function injectFileAnswersToSections(
       if (question.qtype === 'file') {
         const fileMeta = fileMapByQuestion[qId]
         const file = fileMeta && filesByName[fileMeta.file_name]
+
         if (file) {
+          // ✅ Unlink old file if it exists in the current answer
+          const oldFilePath = question.ans?.[0]?.value
+          if (oldFilePath) deleteOldFileIfExists(oldFilePath)
+
+          // ✅ Inject new file answer
           question.ans = [
             {
               type: 1,
@@ -45,7 +64,13 @@ export function injectFileAnswersToSections(
         if (subQ.qtype === 'file') {
           const fileMeta = fileMapByQuestion[subQId]
           const file = fileMeta && filesByName[fileMeta.file_name]
+
           if (file) {
+            // ✅ Unlink old file in sub-question if it exists
+            const oldSubFilePath = subQ.ans?.[0]?.value
+            if (oldSubFilePath) deleteOldFileIfExists(oldSubFilePath)
+
+            // ✅ Inject new sub-question file answer
             subQ.ans = [
               {
                 type: 1,
