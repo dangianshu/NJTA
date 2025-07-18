@@ -4,36 +4,12 @@ import SubmissionPlan from '../models/SubmissionPlan.models'
 export const submissionPlanSeedData = [
   {
     _id: new mongoose.Types.ObjectId(),
-    title: 'FY 2022-2024',
+    title: 'FY 2023-2025',
   },
   {
     _id: new mongoose.Types.ObjectId(),
-    title: 'FY 2024-2026',
-  },
-  // {
-  //   _id: new mongoose.Types.ObjectId(),
-  //   title: 'FY 2024-2026',
-  //   dueDate: new Date('2026-05-01T00:00:00.000Z'),
-  //   reSubmissionDate: new Date('2024-12-31T00:00:00.000Z'),
-  // },
-  // {
-  //   _id: new mongoose.Types.ObjectId(),
-  //   title: 'FY 2025-2027',
-  //   dueDate: new Date('2027-05-01T00:00:00.000Z'),
-  //   reSubmissionDate: new Date('2025-12-31T00:00:00.000Z'),
-  // },
-  // {
-  //   _id: new mongoose.Types.ObjectId(),
-  //   title: 'FY 2026-2028',
-  //   dueDate: new Date('2028-05-01T00:00:00.000Z'),
-  //   reSubmissionDate: new Date('2026-12-31T00:00:00.000Z'),
-  // },
-  // {
-  //   _id: new mongoose.Types.ObjectId(),
-  //   title: 'FY 2036-2038',
-  //   dueDate: new Date('2038-05-01T00:00:00.000Z'),
-  //   reSubmissionDate: new Date('2036-12-31T00:00:00.000Z'),
-  // }
+    title: 'FY 2026-2028',
+  }
 ]
 
 export async function seedSubmissionPlans() {

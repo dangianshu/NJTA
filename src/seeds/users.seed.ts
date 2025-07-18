@@ -115,7 +115,7 @@ export const seedUsers = async () => {
         name: 'Performance Review Board',
         contact: 'Lisa Martinez',
         email: 'eval@yopmail.com',
-        password: 'Test@123',
+        password: 'Test@12345',
         code: 'EVAL131',
         role: 'evaluator',
         isVerified: true,

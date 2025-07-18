@@ -6,17 +6,17 @@ export const sectionSeedData = [
   {
     no: 1,
     role: ['user'],
-    title: 'Organizational Policies and Practices',
+    title: 'Organizational Policies and Accessibility Practices',
   },
   {
     no: 2,
     role: ['user'],
-    title: 'Employment/Volunteer Practices',
+    title: 'Employment and Volunteer Inclusion Practices',
   },
   {
     no: 3,
     role: ['user'],
-    title: 'Program Practices',
+    title: 'Programmatic Accessibility and Outreach',
   },
 ]
 
