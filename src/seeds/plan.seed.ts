@@ -4,11 +4,11 @@ import SubmissionPlan from '../models/SubmissionPlan.models'
 export const submissionPlanSeedData = [
   {
     _id: new mongoose.Types.ObjectId(),
-    title: 'FY 2023-2025',
+    title: 'FY 2024-2026',
   },
   {
     _id: new mongoose.Types.ObjectId(),
-    title: 'FY 2026-2028',
+    title: 'FY 2027-2029',
   }
 ]
 
