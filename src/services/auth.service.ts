@@ -123,7 +123,7 @@ class AuthService {
     const payload: JWTPayload = {
       id: user._id.toString(),
       email: user.email!,
-      role: user.role,
+      role: user.role ? user.role : '', // Ensure role is always a string
       name: user.name,
     }
 

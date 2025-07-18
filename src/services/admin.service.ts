@@ -537,7 +537,7 @@ class AdminService {
           name: user.name,
           email: user.email,
           code: user.code,
-          role: user.role,
+          role: user.role ?? '', // Ensure role is always a string
           submissions: userSubmissions,
         }
       })
@@ -548,7 +548,7 @@ class AdminService {
       statusCode: statusCode.SUCCESS,
       message: 'All user submissions grouped by plan fetched successfully',
       data: {
-        users: usersWithDetailedSubmissions,
+        users: usersWithDetailedSubmissions as unknown as IUser[], 
         pagination: {
           page,
           limit,
@@ -678,7 +678,7 @@ class AdminService {
       }
     }
 
-    const userRole = user.role.toLowerCase()
+    const userRole = (user.role ?? '').toLowerCase()
     const allSections = await Section.find({
       subplan: planId,
       role: { $in: [userRole] },
@@ -844,7 +844,7 @@ class AdminService {
       }
     }
 
-    const userRole = user.role
+    const userRole = (user.role ?? '')
     const allSections = await Section.find({
       subplan: planId,
       role: { $in: [userRole.toLowerCase()] },
