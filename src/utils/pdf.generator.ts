@@ -3,8 +3,9 @@ import path from 'path'
 import fs from 'fs'
 import {
   Document, Packer, Paragraph, TextRun,
-  HeadingLevel, AlignmentType, BorderStyle, ShadingType
+   AlignmentType, BorderStyle, ExternalHyperlink
 } from 'docx'
+import { CONFIG } from '../config/env.config'
 
 export async function generatePdfFromHtml(html: string, outputPath: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -42,6 +43,11 @@ export async function generatePdfFromHtml(html: string, outputPath: string): Pro
 }
 
 export function generateHtmlTemplate(processedSections: any[]): string {
+  const fileBaseUrl = CONFIG.FRONTEND_URL 
+
+  const displayAnswer = (val: any): string =>
+    val !== undefined && val !== null && val !== '' ? val : 'Not Provided'
+
   let html = `
   <!DOCTYPE html>
   <html>
@@ -58,7 +64,7 @@ export function generateHtmlTemplate(processedSections: any[]): string {
           padding: 0;
           background: white;
         }
-        
+
         .header {
           text-align: center;
           margin-bottom: 25px;
@@ -66,18 +72,18 @@ export function generateHtmlTemplate(processedSections: any[]): string {
           border-bottom: 2px solid #000000;
           padding: 8px 0;
         }
-        
+
         .header h1 {
           font-size: 12pt;
           font-weight: bold;
           margin: 0;
           text-transform: uppercase;
         }
-        
+
         .section {
           margin-bottom: 25px;
         }
-        
+
         .section-title {
           font-size: 11pt;
           font-weight: bold;
@@ -85,67 +91,63 @@ export function generateHtmlTemplate(processedSections: any[]): string {
           margin-bottom: 15px;
           text-transform: uppercase;
         }
-        
+
         .question-block {
           margin-bottom: 15px;
         }
-        
+
         .question-line {
           margin-bottom: 8px;
         }
-        
+
         .question-number {
           font-weight: bold;
           margin-right: 5px;
         }
-        
+
         .question-text {
           font-weight: normal;
         }
-        
+
         .sub-question {
           margin-left: 20px;
           margin-top: 5px;
           margin-bottom: 5px;
         }
-        
+
         .sub-question-label {
           font-weight: normal;
           margin-right: 8px;
         }
-        
+
         .answer-line {
           margin-top: 3px;
           margin-bottom: 8px;
         }
-        
+
         .answer-label {
           font-weight: bold;
           margin-right: 5px;
         }
-        
+
         .answer-text {
           font-weight: normal;
         }
-        
+
         .file-link {
           color: #0066cc;
           text-decoration: underline;
         }
-        
+
         .file-link:hover {
           color: #0052a3;
         }
-        
-        .marks {
-          float: right;
-          font-weight: bold;
-        }
-        
+
         .no-answer {
           font-style: italic;
+          color: #666666;
         }
-        
+
         @media print {
           body {
             font-size: 10pt;
@@ -158,14 +160,14 @@ export function generateHtmlTemplate(processedSections: any[]): string {
         <h1>Submission Preview Report</h1>
       </div>`
 
-  let questionCounter = 1;
+  let questionCounter = 1
 
-  processedSections.forEach((section: any, sectionIdx: number) => {
+  processedSections.forEach((section: any) => {
     html += `
       <div class="section">
         <div class="section-title">${section.title || `Section ${section.no}`}</div>`
 
-    section.questions.forEach((question: any, qIdx: number) => {
+    section.questions.forEach((question: any) => {
       html += `
         <div class="question-block">
           <div class="question-line">
@@ -173,83 +175,99 @@ export function generateHtmlTemplate(processedSections: any[]): string {
             <span class="question-text">${question.question}</span>
           </div>`
 
-      // Main question answers (immediately after main question)
-      if (question.ans?.length) {
-        question.ans.forEach((ans: any) => {
-          if (question.qtype === 'file' && ans.value) {
-            const fileName = ans.value.split('/').pop()
-            html += `
-              <div class="answer-line">
-                <span class="answer-label">Ans.</span>
-                <span class="answer-text"><a href="${ans.value}" target="_blank" class="file-link">${fileName}</a></span>
-              </div>`
-          } else {
-            html += `
-              <div class="answer-line">
-                <span class="answer-label">Ans.</span>
-                <span class="answer-text">${ans.value || 'No answer provided'}</span>
-              </div>`
-          }
-        })
-      } else {
-        html += `
-          <div class="answer-line">
-            <span class="answer-label">Ans.</span>
-            <span class="answer-text no-answer">No answer provided</span>
-          </div>`
-      }
+      // Main answers
+if (question.ans?.length) {
+  question.ans.forEach((ans: any) => {
+    const answerValue = displayAnswer(ans.value);
 
-      // Sub-questions and their answers (each sub-question immediately followed by its answer)
-      if (question.subQuestions?.length) {
-        question.subQuestions.forEach((subQ: any, subIdx: number) => {
-          const subLabel = String.fromCharCode(105 + subIdx) // i, ii, iii, iv...
+    if (question.qtype === 'date-range' && ans.value?.from && ans.value?.to) {
+      const from = new Date(ans.value.from).toLocaleDateString();
+      const to = new Date(ans.value.to).toLocaleDateString();
+      html += `
+        <div class="answer-line">
+          <span class="answer-label">Ans.</span>
+          <span class="answer-text">${from} to ${to}</span>
+        </div>`;
+    } else if (question.qtype === 'file' && ans.value && answerValue !== 'Not Provided') {
+      const fileName = ans.value.split('/').pop();
+      const fileUrl = `${fileBaseUrl}/${fileName}`;
+      html += `
+        <div class="answer-line">
+          <span class="answer-label">Ans.</span>
+          <span class="answer-text"><a href="${fileUrl}" target="_blank" class="file-link">${fileName}</a></span>
+        </div>`;
+    } else {
+      const cssClass = answerValue === 'Not Provided' ? 'answer-text no-answer' : 'answer-text';
+      html += `
+        <div class="answer-line">
+          <span class="answer-label">Ans.</span>
+          <span class="${cssClass}">${answerValue}</span>
+        </div>`;
+    }
+  });
+} else {
+  html += `
+    <div class="answer-line">
+      <span class="answer-label">Ans.</span>
+      <span class="answer-text no-answer">Not Provided</span>
+    </div>`;
+}
+
+      // Sub-questions
+if (question.subQuestions?.length) {
+  question.subQuestions.forEach((subQ: any, subIdx: number) => {
+    const subLabel = String.fromCharCode(105 + subIdx) // i, ii, iii...
+
+    html += `
+      <div class="sub-question">
+        <span class="sub-question-label">(${subLabel})</span>
+        <span class="question-text">${subQ.question}</span>
+      </div>`
+
+    if (subQ.ans?.length) {
+      subQ.ans.forEach((ans: any) => {
+        const answerValue = displayAnswer(ans.value)
+
+        if (subQ.qtype === 'date-range' && ans.value?.from && ans.value?.to) {
+          const from = new Date(ans.value.from).toLocaleDateString()
+          const to = new Date(ans.value.to).toLocaleDateString()
           html += `
-            <div class="sub-question">
-              <span class="sub-question-label">(${subLabel})</span>
-              <span class="question-text">${subQ.question}</span>
+            <div class="answer-line">
+              <span class="answer-label">Ans.</span>
+              <span class="answer-text">${from} to ${to}</span>
             </div>`
-          
-          // Sub-question answer immediately after sub-question
-          if (subQ.ans?.length) {
-            subQ.ans.forEach((ans: any) => {
-              if (subQ.qtype === 'file' && ans.value) {
-                const fileName = ans.value.split('/').pop()
-                html += `
-                  <div class="answer-line">
-                    <span class="answer-label">Ans.</span>
-                    <span class="answer-text"><a href="${ans.value}" target="_blank" class="file-link">${fileName}</a></span>
-                  </div>`
-              } else if (subQ.qtype === 'date' && ans.value) {
-                html += `
-                  <div class="answer-line">
-                    <span class="answer-label">Ans.</span>
-                    <span class="answer-text">${new Date(ans.value).toLocaleDateString()}</span>
-                  </div>`
-              } else if (subQ.qtype === 'date-range' && ans.value) {
-                const from = new Date(ans.value.from).toLocaleDateString()
-                const to = new Date(ans.value.to).toLocaleDateString()
-                html += `
-                  <div class="answer-line">
-                    <span class="answer-label">Ans.</span>
-                    <span class="answer-text">${from} to ${to}</span>
-                  </div>`
-              } else {
-                html += `
-                  <div class="answer-line">
-                    <span class="answer-label">Ans.</span>
-                    <span class="answer-text">${ans.value || 'No answer provided'}</span>
-                  </div>`
-              }
-            })
-          } else {
-            html += `
-              <div class="answer-line">
-                <span class="answer-label">Ans.</span>
-                <span class="answer-text no-answer">No answer provided</span>
-              </div>`
-          }
-        })
-      }
+        } else if (subQ.qtype === 'file' && ans.value && answerValue !== 'Not Provided') {
+          const fileName = ans.value.split('/').pop()
+          const fileUrl = `${fileBaseUrl}/${fileName}`
+          html += `
+            <div class="answer-line">
+              <span class="answer-label">Ans.</span>
+              <span class="answer-text"><a href="${fileUrl}" target="_blank" class="file-link">${fileName}</a></span>
+            </div>`
+        } else if (subQ.qtype === 'date' && ans.value && answerValue !== 'Not Provided') {
+          html += `
+            <div class="answer-line">
+              <span class="answer-label">Ans.</span>
+              <span class="answer-text">${new Date(ans.value).toLocaleDateString()}</span>
+            </div>`
+        } else {
+          const cssClass = answerValue === 'Not Provided' ? 'answer-text no-answer' : 'answer-text'
+          html += `
+            <div class="answer-line">
+              <span class="answer-label">Ans.</span>
+              <span class="${cssClass}">${answerValue}</span>
+            </div>`
+        }
+      })
+    } else {
+      html += `
+        <div class="answer-line">
+          <span class="answer-label">Ans.</span>
+          <span class="answer-text no-answer">Not Provided</span>
+        </div>`
+    }
+  })
+}
 
       html += `</div>` // Close question-block
     })
@@ -262,6 +280,11 @@ export function generateHtmlTemplate(processedSections: any[]): string {
 }
 
 export async function generateDocxFromSections(sections: any[], outputPath: string) {
+  const fileBaseUrl = CONFIG.FRONTEND_URL || 'http://localhost:3002/uploads'
+  
+  const displayAnswer = (val: any): string =>
+    val !== undefined && val !== null && val !== '' ? val : 'Not Provided'
+
   const doc = new Document({
     sections: [
       {
@@ -277,12 +300,12 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
               new TextRun({
                 text: 'SUBMISSION PREVIEW REPORT',
                 bold: true,
-                size: 24,
+                size: 24, // Keep title slightly larger
                 font: 'Arial'
               })
             ],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 360 },
+            spacing: { after: 500 },
             border: {
               top: { color: "000000", size: 6, style: BorderStyle.SINGLE },
               bottom: { color: "000000", size: 6, style: BorderStyle.SINGLE }
@@ -299,12 +322,12 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
                 new TextRun({
                   text: sectionTitle.toUpperCase(),
                   bold: true,
-                  size: 22,
+                  size: 22, // 11pt
                   font: 'Arial'
                 })
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 360, after: 240 }
+              spacing: { before: 500, after: 300 }
             })
  
             // Questions
@@ -318,61 +341,72 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
                     new TextRun({
                       text: `${questionCounter++}. `,
                       bold: true,
-                      size: 22,
+                      size: 22, // 11pt
                       font: 'Arial'
                     }),
                     new TextRun({
                       text: question.question,
-                      size: 22,
+                      size: 22, // 11pt
                       font: 'Arial'
                     }),
                   ],
-                  spacing: { before: 180, after: 120 }
+                  spacing: { before: 120, after: 60 }
                 })
               )
  
               // Main question answers (immediately after main question)
               if (question.ans?.length) {
                 question.ans.forEach((ans: any) => {
-                  if (question.qtype === 'file' && ans.value) {
+                  const answerValue = displayAnswer(ans.value)
+                  
+                  if (question.qtype === 'file' && ans.value && answerValue !== 'Not Provided') {
                     const fileName = ans.value.split('/').pop()
+                    const fileUrl = `${fileBaseUrl}/${fileName}`
                     elements.push(
                       new Paragraph({
                         children: [
                           new TextRun({
                             text: 'Ans. ',
                             bold: true,
-                            size: 22,
+                            size: 22, // 11pt
                             font: 'Arial'
                           }),
-                          new TextRun({
-                            text: fileName,
-                            size: 22,
-                            font: 'Arial',
-                            color: '0066cc',
-                            underline: {}
+                          new ExternalHyperlink({
+                            children: [
+                              new TextRun({
+                                text: fileName,
+                                size: 22, // 11pt
+                                font: 'Arial',
+                                color: '0066cc',
+                                underline: {}
+                              }),
+                            ],
+                            link: fileUrl
                           }),
                         ],
-                        spacing: { before: 60, after: 120 }
+                        spacing: { before: 60, after: 160 }
                       })
                     )
                   } else {
+                    const isNotProvided = answerValue === 'Not Provided'
                     elements.push(
                       new Paragraph({
                         children: [
                           new TextRun({
                             text: 'Ans. ',
                             bold: true,
-                            size: 22,
+                            size: 22, // 11pt
                             font: 'Arial'
                           }),
                           new TextRun({
-                            text: ans.value || 'No answer provided',
-                            size: 22,
-                            font: 'Arial'
+                            text: answerValue,
+                            size: 22, // 11pt
+                            font: 'Arial',
+                            italics: isNotProvided,
+                            color: isNotProvided ? '666666' : '000000'
                           }),
                         ],
-                        spacing: { before: 60, after: 120 }
+                        spacing: { before: 60, after: 160 }
                       })
                     )
                   }
@@ -384,17 +418,18 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
                       new TextRun({
                         text: 'Ans. ',
                         bold: true,
-                        size: 22,
+                        size: 22, // 11pt
                         font: 'Arial'
                       }),
                       new TextRun({
-                        text: 'No answer provided',
+                        text: 'Not Provided',
                         italics: true,
-                        size: 22,
-                        font: 'Arial'
+                        size: 22, // 11pt
+                        font: 'Arial',
+                        color: '666666'
                       }),
                     ],
-                    spacing: { before: 60, after: 120 }
+                    spacing: { before: 60, after: 160 }
                   })
                 )
               }
@@ -404,73 +439,79 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
                 question.subQuestions.forEach((subQ: any, subIdx: number) => {
                   const subLabel = String.fromCharCode(105 + subIdx) // i, ii, iii, iv...
                   
-                  // Sub-question
+                  // Sub-question with proper indentation
                   elements.push(
                     new Paragraph({
                       children: [
                         new TextRun({
                           text: `(${subLabel}) `,
-                          size: 22,
+                          size: 22, // 11pt
                           font: 'Arial'
                         }),
                         new TextRun({
                           text: subQ.question,
-                          size: 22,
+                          size: 22, // 11pt
                           font: 'Arial'
                         }),
                       ],
-                      indent: { left: 720 },
-                      spacing: { before: 120, after: 60 }
+                      indent: { left: 576 }, // 20px equivalent in twentieths of a point
+                      spacing: { before: 100, after: 60 }
                     })
                   )
                   
                   // Sub-question answer immediately after sub-question
                   if (subQ.ans?.length) {
                     subQ.ans.forEach((ans: any) => {
-                      if (subQ.qtype === 'file' && ans.value) {
+                      const answerValue = displayAnswer(ans.value)
+                      
+                      if (subQ.qtype === 'file' && ans.value && answerValue !== 'Not Provided') {
                         const fileName = ans.value.split('/').pop()
+                        const fileUrl = `${fileBaseUrl}/${fileName}`
                         elements.push(
                           new Paragraph({
                             children: [
                               new TextRun({
                                 text: 'Ans. ',
                                 bold: true,
-                                size: 22,
+                                size: 22, // 11pt
                                 font: 'Arial'
                               }),
-                              new TextRun({
-                                text: fileName,
-                                size: 22,
-                                font: 'Arial',
-                                color: '0066cc',
-                                underline: {}
+                              new ExternalHyperlink({
+                                children: [
+                                  new TextRun({
+                                    text: fileName,
+                                    size: 22, // 11pt
+                                    font: 'Arial',
+                                    color: '0066cc',
+                                    underline: {}
+                                  }),
+                                ],
+                                link: fileUrl
                               }),
                             ],
-                            indent: { left: 720 },
-                            spacing: { before: 60, after: 120 }
+                            spacing: { before: 60, after: 160 }
                           })
                         )
-                      } else if (subQ.qtype === 'date' && ans.value) {
+                      } else if (subQ.qtype === 'date' && ans.value && answerValue !== 'Not Provided') {
                         elements.push(
                           new Paragraph({
                             children: [
                               new TextRun({
                                 text: 'Ans. ',
                                 bold: true,
-                                size: 22,
+                                size: 22, // 11pt
                                 font: 'Arial'
                               }),
                               new TextRun({
                                 text: new Date(ans.value).toLocaleDateString(),
-                                size: 22,
+                                size: 22, // 11pt
                                 font: 'Arial'
                               }),
                             ],
-                            indent: { left: 720 },
-                            spacing: { before: 60, after: 120 }
+                            spacing: { before: 60, after: 160 }
                           })
                         )
-                      } else if (subQ.qtype === 'date-range' && ans.value) {
+                      } else if (subQ.qtype === 'date-range' && ans.value?.from && ans.value?.to) {
                         const from = new Date(ans.value.from).toLocaleDateString()
                         const to = new Date(ans.value.to).toLocaleDateString()
                         elements.push(
@@ -479,37 +520,38 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
                               new TextRun({
                                 text: 'Ans. ',
                                 bold: true,
-                                size: 22,
+                                size: 22, // 11pt
                                 font: 'Arial'
                               }),
                               new TextRun({
                                 text: `${from} to ${to}`,
-                                size: 22,
+                                size: 22, // 11pt
                                 font: 'Arial'
                               }),
                             ],
-                            indent: { left: 720 },
-                            spacing: { before: 60, after: 120 }
+                            spacing: { before: 60, after: 160 }
                           })
                         )
                       } else {
+                        const isNotProvided = answerValue === 'Not Provided'
                         elements.push(
                           new Paragraph({
                             children: [
                               new TextRun({
                                 text: 'Ans. ',
                                 bold: true,
-                                size: 22,
+                                size: 22, // 11pt
                                 font: 'Arial'
                               }),
                               new TextRun({
-                                text: ans.value || 'No answer provided',
-                                size: 22,
-                                font: 'Arial'
+                                text: answerValue,
+                                size: 22, // 11pt
+                                font: 'Arial',
+                                italics: isNotProvided,
+                                color: isNotProvided ? '666666' : '000000'
                               }),
                             ],
-                            indent: { left: 720 },
-                            spacing: { before: 60, after: 120 }
+                            spacing: { before: 60, after: 160 }
                           })
                         )
                       }
@@ -521,18 +563,18 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
                           new TextRun({
                             text: 'Ans. ',
                             bold: true,
-                            size: 22,
+                            size: 22, // 11pt
                             font: 'Arial'
                           }),
                           new TextRun({
-                            text: 'No answer provided',
+                            text: 'Not Provided',
                             italics: true,
-                            size: 22,
-                            font: 'Arial'
+                            size: 22, // 11pt
+                            font: 'Arial',
+                            color: '666666'
                           }),
                         ],
-                        indent: { left: 720 },
-                        spacing: { before: 60, after: 120 }
+                        spacing: { before: 60, after: 160 }
                       })
                     )
                   }
@@ -557,3 +599,6 @@ export async function generateDocxFromSections(sections: any[], outputPath: stri
   const buffer = await Packer.toBuffer(doc)
   fs.writeFileSync(outputPath, buffer)
 }
+
+
+

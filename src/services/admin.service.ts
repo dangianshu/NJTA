@@ -482,9 +482,10 @@ class AdminService {
     const { page = 1, limit = 10 } = pagination
     const skip = (page - 1) * limit
 
-    const query: any = {}
-
-    // 1. Filter by role
+    const query: any = {
+      role: { $nin: ['admin', 'evaluator'] },
+    }
+    // 1. Filter by role (additional role filters)
     if (role && role !== 'null') {
       query.code = {
         ...(role === 'evaluator' && { $regex: 'EVAL' }),
@@ -498,61 +499,77 @@ class AdminService {
       query.$or = [{ name: { $regex: searchRegex } }]
     }
 
-    // 3. Fetch users and total count
-    const [users, total] = await Promise.all([
-      User.find(query)
-        .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      User.countDocuments(query),
-    ])
-
-    // 4. Get all plans (filtered by FY)
+    // 3. Get all plans (filtered by FY)
     const planQuery: any = fy ? { title: fy } : {}
     const plans = await SubmissionPlan.find(planQuery).lean()
 
-    // 5. Map user submissions with full plan details
-    const usersWithDetailedSubmissions = users
-      .filter((user) => user.role !== 'evaluator') // Exclude evaluators
-      .map((user) => {
-        const userSubmissions = plans.map((plan) => {
-          const userSubmissionForPlan = (user.submission || []).find(
-            (s: any) => String(s?.subplan?._id || s?.subplan) === String(plan._id)
-          )
+    // 4. Get ALL users that match filters (no pagination yet)
+    const allUsers = await User.find(query)
+      .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+      .sort('-updatedAt')
+      .lean()
 
-          const { status, pdfLink } = this.getSubmissionStatus(user.submission || [], plan)
+    // 5. Process all users to create flattened submissions
+    const allSubmissions: Array<{
+      user: any
+      submissionData: any
+    }> = []
 
-          return {
+    allUsers.forEach((user) => {
+      plans.forEach((plan) => {
+        const userSubmissionForPlan = (user.submission || []).find(
+          (s: any) => String(s?.subplan?._id || s?.subplan) === String(plan._id)
+        )
+
+        const { status, pdfLink } = this.getSubmissionStatus(user.submission || [], plan)
+
+        allSubmissions.push({
+          user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            code: user.code,
+            role: user.role ?? '',
+          },
+          submissionData: {
             _id: userSubmissionForPlan?._id || undefined,
             status,
             submitted: userSubmissionForPlan?.submitted || false,
+            submissionDate: userSubmissionForPlan?.submissionDate || null,
             subplan: plan,
             pdfLink,
-          }
+          },
         })
-
-        return {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          code: user.code,
-          role: user.role ?? '', // Ensure role is always a string
-          submissions: userSubmissions,
-        }
       })
+    })
 
-    // 6. Final Response
+    // 6. Apply pagination to the flattened submissions
+    const paginatedSubmissions = allSubmissions.slice(skip, skip + limit)
+
+    // 7. Re-group by user for the response
+    const usersMap = new Map<string, any>()
+
+    paginatedSubmissions.forEach(({ user, submissionData }) => {
+      if (!usersMap.has(user._id)) {
+        usersMap.set(user._id, {
+          ...user,
+          submissions: [],
+        })
+      }
+      usersMap.get(user._id).submissions.push(submissionData)
+    })
+
+    // 8. Final Response
     return {
       success: true,
       statusCode: statusCode.SUCCESS,
       message: 'All user submissions grouped by plan fetched successfully',
       data: {
-        users: usersWithDetailedSubmissions as unknown as IUser[], 
+        users: Array.from(usersMap.values()),
         pagination: {
           page,
           limit,
-          total,
+          total: allSubmissions.length, // Total submissions count
         },
       },
     }
@@ -844,7 +861,7 @@ class AdminService {
       }
     }
 
-    const userRole = (user.role ?? '')
+    const userRole = user.role ?? ''
     const allSections = await Section.find({
       subplan: planId,
       role: { $in: [userRole.toLowerCase()] },

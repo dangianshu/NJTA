@@ -12,4 +12,5 @@ export const CONFIG = {
   ADMIN_EMAIL: process.env.EMAIL_FROM,
   ADMIN_PASS: process.env.EMAIL_PASSWORD,
   FRONTEND_AUTH_URL: process.env.FRONTENDURL,
+  FRONTEND_URL: process.env.FILE_BASE_URL,
 }

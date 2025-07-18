@@ -1,10 +1,9 @@
 import Joi from 'joi'
 
 export const registerValidation = Joi.object({
-  name: Joi.string().min(2).max(50).required().messages({
+  name: Joi.string().min(2).max(100).required().messages({
     'string.empty': 'Name is required',
     'string.min': 'Name must be at least 2 characters',
-    // 'string.max': 'Name must not exceed 50 characters',
     'any.required': 'Name is required',
   }),
 
@@ -26,10 +25,9 @@ export const registerValidation = Joi.object({
       'any.required': 'Password is required',
     }),
 
-  contact: Joi.string().min(2).max(50).required().messages({
+  contact: Joi.string().min(2).max(100).required().messages({
     'string.empty': 'Contact name is required',
     'string.min': 'Contact name must be at least 2 characters',
-    'string.max': 'Contact name must not exceed 50 characters',
     'any.required': 'Contact name is required',
   }),
 

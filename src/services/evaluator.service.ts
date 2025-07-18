@@ -20,7 +20,7 @@ class EvaluatorService {
 
     const query: any = {}
 
-    const validStatuses = ['submitted', 'needs-improvement', 'complete', 'ni-submitted']
+    const validStatuses = ['submitted', 'needs-improvement', 'complete', 'ni-submitted','approved']
     let fyPlanId: string | null = null
 
     // Get FY plan ID if fy is provided
