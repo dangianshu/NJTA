@@ -5,14 +5,10 @@ export const submissionPlanSeedData = [
   {
     _id: new mongoose.Types.ObjectId(),
     title: 'FY 2022-2024',
-    dueDate: new Date('2024-05-01T00:00:00.000Z'),
-    reSubmissionDate: new Date('2021-10-22T00:00:00.000Z'),
   },
   {
     _id: new mongoose.Types.ObjectId(),
     title: 'FY 2024-2026',
-    dueDate: new Date('2025-05-01T00:00:00.000Z'),
-    reSubmissionDate: new Date('2023-07-01T00:00:00.000Z'),
   },
   // {
   //   _id: new mongoose.Types.ObjectId(),

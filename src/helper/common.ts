@@ -1,4 +1,6 @@
 import User from '../models/User.models'
+import { ISubmissionPlan } from '../types/submissionPlan.interface'
+import { SubmissionStatus } from '../utils/constant'
 
 export function getRoleByCode(code: string): 'user' | 'evaluator' {
   if (code.startsWith('EVAL')) return 'evaluator'
@@ -141,4 +143,56 @@ export async function toPlainObject<T = any>(doc: T, excludeFields: string[] = [
   const obj = typeof (doc as any).toObject === 'function' ? (doc as any).toObject() : doc
   excludeFields.forEach(field => delete obj[field])
   return obj
+}
+
+export function getSubmissionStatus(
+  userSubmissions: any[],
+  plan: ISubmissionPlan
+): { status: string; pdfLink: string | null } {
+  const planId = plan._id.toString()
+  const currentDate = new Date()
+
+  const regularStart = plan.regularSubmissionStartDate
+    ? new Date(plan.regularSubmissionStartDate)
+    : null
+
+  const regularEnd = plan.regularSubmissionEndDate
+    ? new Date(plan.regularSubmissionEndDate)
+    : null
+
+  const reSubmitDate = plan.reSubmissionDate
+    ? new Date(plan.reSubmissionDate)
+    : null
+
+  // If plan hasn't started
+  if (!regularStart || currentDate < regularStart) {
+    return {
+      status: 'not-started',
+      pdfLink: null,
+    }
+  }
+
+  // Get user's submission entry for this plan
+  const userSubmission = userSubmissions.find(
+    (sub: any) => sub.subplan?.toString() === planId
+  )
+
+  // If submission exists and has a defined status, use it (unless we override below)
+  let finalStatus = userSubmission?.status || SubmissionStatus.IN_PROGRESS
+  let pdfLink = userSubmission?.pdfLink || null
+
+  const hasRegularEnded = regularEnd && currentDate > regularEnd
+
+  if (hasRegularEnded) {
+    const isInReSubmissionWindow = reSubmitDate && currentDate <= reSubmitDate
+
+    if (!isInReSubmissionWindow) {
+      finalStatus = 'submission-closed'
+    }
+  }
+
+  return {
+    status: finalStatus,
+    pdfLink,
+  }
 }

@@ -20,18 +20,18 @@ class EvaluatorService {
 
     const query: any = {}
 
+    const validStatuses = ['submitted', 'needs-improvement', 'complete', 'ni-submitted']
+    let fyPlanId: string | null = null
+
+    // Get FY plan ID if fy is provided
     if (fy) {
       const fyPlan = await SubmissionPlan.findOne({ title: fy })
       if (fyPlan) {
-        query.submission = {
-          $elemMatch: {
-            subplan: fyPlan._id,
-            status: { $ne: SubmissionStatus.DRAFT },
-          },
-        }
+        fyPlanId = fyPlan._id.toString()
       }
     }
 
+    // Role filtering
     if (role && role !== 'null') {
       query.code = {
         ...(role === 'evaluator' && { $regex: 'EVAL' }),
@@ -39,36 +39,52 @@ class EvaluatorService {
       }
     }
 
+    // Search filtering
     if (search?.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i')
       query.$or = [{ name: { $regex: searchRegex } }]
     }
 
+    // Fetch users
     const users = await User.find(query)
       .populate({
         path: 'submission.subplan',
         model: 'SubmissionPlan',
+        select:
+          'regularSubmissionStartDate regularSubmissionEndDate evaluationStartDate evaluationEndDate reSubmissionDate dueDate title ',
       })
       .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
       .skip(skip)
       .limit(limit)
 
-    // Remove draft submissions from each user
     const filteredUsers = users
       .map((user) => {
         if (!Array.isArray(user.submission)) return user
-        user.submission = user.submission.filter(
-          (sub) => sub.status !== SubmissionStatus.DRAFT && sub.status !== 'draft'
-        )
+
+        user.submission = user.submission
+          .filter((sub) => {
+            const plan = sub.subplan as any
+            const matchesStatus = validStatuses.includes(sub.status)
+            const matchesFy = fyPlanId ? plan?._id?.toString() === fyPlanId : true
+            return matchesStatus && matchesFy
+          })
+          .map((sub) => {
+            // Add `id` from `_id` if needed
+            if (sub.subplan && typeof sub.subplan === 'object') {
+              const plan = sub.subplan as any
+              plan.id = plan._id
+            }
+            return sub
+          })
+
         return user
       })
-      // Only include users with at least one non-draft submission
       .filter((user) => Array.isArray(user.submission) && user.submission.length > 0)
 
     return {
       success: true,
       statusCode: statusCode.SUCCESS,
-      message: 'Submissions fetched successfully',
+      message: 'Filtered submissions fetched successfully',
       data: {
         users: filteredUsers,
         pagination: {
@@ -128,14 +144,6 @@ class EvaluatorService {
 
     submission.status = SubmissionStatus.CORRECTION_REQUIRED
     await submission.save()
-    await User.updateOne(
-      { _id: submission.user, 'submission.subplan': submission.subplan },
-      {
-        $set: {
-          'submission.$.status': SubmissionStatus.NEEDS_IMPROVEMENT,
-        },
-      }
-    )
     return {
       success: true,
       statusCode: statusCode.SUCCESS,
@@ -143,6 +151,7 @@ class EvaluatorService {
       data: await toPlainObject(submission),
     }
   }
+  
 }
 
 const evaluatorService = new EvaluatorService()

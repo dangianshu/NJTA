@@ -20,7 +20,7 @@ const SubmissionPlanSchema = new Schema<ISubmissionPlan>(
       required: false,
     },
     evaluationEndDate: {
-      type: Date,
+      type: Date, 
       required: false,
     },
     regularSubmissionStartDate: {

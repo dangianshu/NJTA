@@ -2,6 +2,9 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 
+const allowedExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png']
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadPath = path.join(__dirname, '../../public/uploads')
@@ -15,9 +18,23 @@ const storage = multer.diskStorage({
   },
 })
 
-export const upload = multer({ storage })
+function fileFilter(req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) {
+  const ext = path.extname(file.originalname).toLowerCase()
 
+  if (allowedExtensions.includes(ext)) {
+    cb(null, true)
+  } else {
+    cb(new Error('Invalid file type. Only PDF, DOC, DOCX, JPG, and PNG are allowed.'))
+  }
+}
 
+export const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+  },
+  fileFilter,
+})
 
 function deleteOldFileIfExists(filePath: string) {
   if (!filePath) return

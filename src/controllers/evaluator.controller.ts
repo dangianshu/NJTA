@@ -12,7 +12,7 @@ class EvaluatorController {
         page: Number(page),
         limit: Number(limit),
       }
-      const result = await adminService.getAllSubmission(
+      const result = await evaluatorService.getAllSubmission(
         role as string,
         pagination,
         fy as string,

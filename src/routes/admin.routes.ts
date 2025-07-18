@@ -33,5 +33,7 @@ router.get(
 )
 router.put('/update/status/:plan/:user', verifyToken, checkRole(['admin', 'evaluator']), adminController.updateSubmissionStatus)
 router.get('/export/preview/:plan/:user', adminController.getPreviewExport)
+router.get('/user', verifyToken, checkRole(['admin']), adminController.getAllUsers)
+router.put('/user/:id', verifyToken, checkRole(['admin']), adminController.updateProfile)
 
 export default router

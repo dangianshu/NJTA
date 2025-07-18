@@ -4,6 +4,7 @@ import { responseData } from '../helper/response'
 import { statusCode } from '../utils/statusCode'
 
 class AdminController {
+  
   async createInvitation(req: Request, res: Response) {
     try {
       const result = await adminService.createInvitation(req.body)
@@ -190,7 +191,9 @@ class AdminController {
   async updateSubmissionStatus(req: Request, res: Response) {
     try {
       const { plan, user } = req.params
-      const { status } = req.query
+      const { status} = req.query
+      const isSubmitted = req.query.isSubmitted as unknown as boolean;
+
       if (!plan || !user || !status) {
         return responseData({
           res,
@@ -199,7 +202,7 @@ class AdminController {
           error: 'Missing user, subID, or status',
         })
       }
-      const result = await adminService.updateSubmissionStatus(plan, user, String(status))
+      const result = await adminService.updateSubmissionStatus(plan, user, String(status), isSubmitted ?? false)
       if (!result.success) {
         return responseData({
           res,
@@ -230,7 +233,6 @@ class AdminController {
     try {
       const { plan, user } = req.params
       const format = req.query.format as string
-      console.log('format: ', format)
 
       if (!plan || !user) {
         return responseData({
@@ -269,6 +271,72 @@ class AdminController {
       })
     }
   }
+
+  async getAllUsers(req: Request, res: Response) {
+    try {
+      const result = await adminService.getAllUsers()
+
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        })
+      }
+
+      return responseData({
+        res,
+        statusCode: result.statusCode,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      })
+    } catch (error) {
+      console.error('[AdminController] getPreviewExport error: ', error)
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      })
+    }
+  }
+
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      const updateFields = req.body
+
+      const result = await adminService.updateProfile(id, updateFields)
+
+      if (!result.success) {
+        return responseData({
+          res,
+          statusCode: result.statusCode,
+          success: 0,
+          error: result.message,
+        })
+      }
+
+      return responseData({
+        res,
+        statusCode: result.statusCode,
+        success: 1,
+        message: result.message,
+        data: result.data,
+      })
+    } catch (error) {
+      console.error('[AdminController] updateUser error:', error)
+      return responseData({
+        res,
+        statusCode: statusCode.SERVER_ERROR,
+        success: 0,
+        error: (error as Error).message,
+      })
+    }
+  }
+
 }
 
 const adminController = new AdminController()

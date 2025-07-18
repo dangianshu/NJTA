@@ -18,4 +18,5 @@ export enum SubmissionStatus {
   CORRECTION_REQUIRED = 'correction-required',
   REVIEW_IN_PROGRESS = 'review-in-progress',
   REVIEW_COMPLETED = 'review-completed',
+  NI_SUBMITTED = 'ni-submitted'
 }
