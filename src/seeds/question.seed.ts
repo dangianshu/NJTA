@@ -23,9 +23,9 @@ export const questionSeedData = [
         options: [],
       },
     ],
-    role: ['user'],
+    role: ['user','evaluator'],
     no: '1',
-    question: 'Please provide your full name.',
+    question: 'Please provide your full name user and evaluator.',
     sectionNo: 1,
   },
   {
@@ -51,7 +51,7 @@ export const questionSeedData = [
     role: ['user'],
     sectionNo: 1,
     no: '1',
-    question: 'What is your gender?',
+    question: 'What is your gender user?',
   },
   {
     options: ['High School', 'Bachelor', 'Master', 'PhD'],
@@ -73,10 +73,10 @@ export const questionSeedData = [
         options: ['Yes', 'No'],
       },
     ],
-    role: ['user'],
+    role: ['evaluator'],
     sectionNo: 1,
     no: '1',
-    question: 'Select your highest education level.',
+    question: 'Evaluator Select your highest education level.',
   },
   {
     options: [],
@@ -84,7 +84,7 @@ export const questionSeedData = [
     qtype: 'file',
     subQuestions: [
       {
-        question: 'Upload your cover letter.',
+        question: 'User Upload your cover letter.',
         optional: true,
         qtype: 'file',
         no: 2,
@@ -100,8 +100,8 @@ export const questionSeedData = [
     ],
     role: ['user'],
     sectionNo: 2,
-    no: '2',
-    question: 'Upload your resume.',
+    no: '1',
+    question: ' User Upload your resume.',
   },
   {
     options: ['JavaScript', 'Python', 'Java', 'C#', 'Go', 'Other'],
@@ -123,10 +123,10 @@ export const questionSeedData = [
         options: ['Yes', 'No'],
       },
     ],
-    role: ['user'],
+    role: ['evaluator'],
     sectionNo: 2,
     no: '2',
-    question: 'Which programming languages do you know?',
+    question: 'Which evaluator programming languages do you know?',
   },
   {
     options: [],
@@ -134,7 +134,7 @@ export const questionSeedData = [
     qtype: 'date',
     subQuestions: [
       {
-        question: 'When did you finish your last project?',
+        question: 'When user and evaluator did you finish your last project?',
         optional: false,
         qtype: 'date',
         no: 2,
@@ -148,10 +148,10 @@ export const questionSeedData = [
         options: [],
       },
     ],
-    role: ['user'],
+    role: ['user', 'evaluator'],
     sectionNo: 2,
-    no: '2',
-    question: 'Please provide your available start date.',
+    no: '3',
+    question: 'Please provide user and evaluator your available start date.',
   },
   {
     options: [],
@@ -159,7 +159,7 @@ export const questionSeedData = [
     qtype: 'date-range',
     subQuestions: [
       {
-        question: 'What was your previous employment duration?',
+        question: 'What evaluator was your previous employment duration?',
         optional: false,
         qtype: 'date-range',
         no: 2,
@@ -173,10 +173,10 @@ export const questionSeedData = [
         options: [],
       },
     ],
-    role: ['user'],
+    role: ['evaluator'],
     sectionNo: 3,
-    no: '3',
-    question: 'Specify your availability range.',
+    no: '1',
+    question: 'Specify evaluator your availability range.',
   },
   {
     options: [],
@@ -184,7 +184,7 @@ export const questionSeedData = [
     qtype: 'date',
     subQuestions: [
       {
-        question: 'What date did you last update your resume?',
+        question: 'What User date did you last update your resume?',
         optional: true,
         qtype: 'date',
         no: 2,
@@ -200,8 +200,8 @@ export const questionSeedData = [
     ],
     role: ['user'],
     sectionNo: 3,
-    no: '3',
-    question: 'When did you last apply for a job?',
+    no: '2',
+    question: 'When User did you last apply for a job?',
   },
   {
     options: [],
@@ -216,23 +216,22 @@ export const questionSeedData = [
         options: [],
       },
       {
-        question: 'What was your last training program duration?',
+        question: 'What was your last user and evaluator training program duration?',
         optional: true,
         qtype: 'date-range',
         no: 3,
         options: [],
       },
     ],
-    role: ['user'],
+    role: ['user', 'evaluator'],
     sectionNo: 3,
     no: '3',
-    question: 'Provide your learning experience duration.',
+    question: 'Provide evaluator and user your learning experience duration.',
   },
 ]
 
 export async function seedQuestions() {
   try {
-    // Fetch all sections to build the mapping
     const allSections = await Section.find({}).lean()
 
     if (allSections.length === 0) {
@@ -242,53 +241,31 @@ export async function seedQuestions() {
 
     console.log(`📊 Found ${allSections.length} sections across all submission plans`)
 
-    // Build section mapping: sectionNo-role -> section._id
-    const sectionNumberToIdMap = new Map()
-    allSections.forEach((section) => {
-      const key = `${section.no}-${section.role[0]}`
-      // Store all section IDs for this sectionNo-role combination
-      if (!sectionNumberToIdMap.has(key)) {
-        sectionNumberToIdMap.set(key, [])
-      }
-      sectionNumberToIdMap.get(key).push(section._id)
-    })
+    const allQuestions: any[] = []
 
-    console.log(
-      `🗺️ Created section mapping for ${sectionNumberToIdMap.size} unique section-role combinations`
-    )
+    for (const section of allSections) {
+      const sectionRoles = section.role
+      const sectionNo = section.no
 
-    let allQuestions = []
-
-    // Create questions for each section
-    for (const [sectionKey, sectionIds] of sectionNumberToIdMap.entries()) {
-      const [sectionNo, role] = sectionKey.split('-')
-
-      // Find questions for this section number and role
-      const questionsForSection = questionSeedData.filter(
-        (q) => q.sectionNo === parseInt(sectionNo) && q.role.includes(role)
+      // Find questions for this section number and matching role(s)
+      const questionsForSection = questionSeedData.filter((q) =>
+        q.sectionNo === sectionNo && q.role.some((r) => sectionRoles.includes(r))
       )
 
-      // Create questions for each section ID (across all submission plans)
-      for (const sectionId of sectionIds) {
-        const questionsForThisSection = questionsForSection.map((questionData) => ({
-          ...questionData,
-          _id: new mongoose.Types.ObjectId(),
-          section: sectionId,
-          // Remove sectionNo as it's not needed in the final document
-          sectionNo: undefined,
-        }))
+      const questionsToInsert = questionsForSection.map((questionData) => ({
+        ...questionData,
+        _id: new mongoose.Types.ObjectId(),
+        section: section._id as mongoose.Types.ObjectId,
+        sectionNo: undefined, // remove extra field
+      }))
 
-        allQuestions.push(...questionsForThisSection)
-      }
+      allQuestions.push(...questionsToInsert)
     }
 
     console.log(`📝 Prepared ${allQuestions.length} questions for insertion`)
 
-    // Remove undefined sectionNo from questions
-    const questionsToInsert = allQuestions.map(({ sectionNo, ...rest }) => rest)
-
-    // Use bulk operations for better performance
-    const bulkOps = questionsToInsert.map((question) => ({
+    // Use bulkWrite for efficient inserts
+    const bulkOps = allQuestions.map((question) => ({
       updateOne: {
         filter: { _id: question._id },
         update: { $set: question },
@@ -298,12 +275,12 @@ export async function seedQuestions() {
 
     if (bulkOps.length > 0) {
       await Question.bulkWrite(bulkOps)
-      console.log(`✅ ${questionsToInsert.length} questions inserted/updated successfully.`)
+      console.log(`✅ ${allQuestions.length} questions inserted/updated successfully.`)
     } else {
       console.log('ℹ️ No questions to insert or update.')
     }
 
-    return questionsToInsert
+    return allQuestions
   } catch (error) {
     console.error('❌ Error seeding questions:', error instanceof Error ? error.message : error)
     throw error

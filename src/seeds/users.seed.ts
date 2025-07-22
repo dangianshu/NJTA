@@ -14,8 +14,9 @@ export const seedUsers = async () => {
         name: 'Bay Atlantic Symphony',
         contact: 'Music Team',
         code: 'NJACCESS425',
+        password: 'Test@12345',
         role: 'user',
-        isVerified: false,
+        isVerified: true,
         submission: [],
       },
       {

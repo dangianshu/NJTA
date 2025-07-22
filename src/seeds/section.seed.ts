@@ -5,7 +5,7 @@ import SubmissionPlan from '../models/SubmissionPlan.models'
 export const sectionSeedData = [
   {
     no: 1,
-    role: ['user'],
+    role: ['user','evaluator'],
     title: 'Organizational Policies and Accessibility Practices',
   },
   {
@@ -15,14 +15,14 @@ export const sectionSeedData = [
   },
   {
     no: 3,
-    role: ['user'],
+    role: ['evaluator'],
     title: 'Programmatic Accessibility and Outreach',
   },
+
 ]
 
 export async function seedSections() {
   try {
-    // Get all submission plans
     const submissionPlans = await SubmissionPlan.find({}).lean()
 
     if (submissionPlans.length === 0) {

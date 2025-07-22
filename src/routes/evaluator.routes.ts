@@ -8,7 +8,7 @@ router.get('/submissions', evaluatorAuthGuard, evaluatorController.getAllSubmiss
 router.post(
   '/feedback/:submissionId',
   universalAuthGuard,
-  checkRole(['admin', 'evaluator']),
+  checkRole(['admin']),
   evaluatorController.addFeedbackToSubmission
 )
 

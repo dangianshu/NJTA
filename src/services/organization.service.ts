@@ -25,77 +25,98 @@ class OrganizationService {
     return submission.status || SubmissionStatus.IN_PROGRESS
   }
 
-  // Helper function to get plan status from user submission array
-  private getPlanStatusFromUserSubmission(
+  private getSubmissionStatus(
     userSubmissions: any[],
-    planId: string
+    plan: ISubmissionPlan
   ): { status: string; pdfLink: string | null } {
+    const planId = plan._id.toString()
+    const currentDate = new Date()
+
+    const regularStart = plan.regularSubmissionStartDate
+      ? new Date(plan.regularSubmissionStartDate)
+      : null
+    const regularEnd = plan.regularSubmissionEndDate
+      ? new Date(plan.regularSubmissionEndDate)
+      : null
+    const reSubmitDate = plan.reSubmissionDate ? new Date(plan.reSubmissionDate) : null
+
+    if (!regularStart || currentDate < regularStart) {
+      return {
+        status: 'not-started',
+        pdfLink: null,
+      }
+    }
+
+    const hasRegularEnded = regularEnd && currentDate > regularEnd
+    if (hasRegularEnded) {
+      const isInReSubmissionWindow = reSubmitDate && currentDate <= reSubmitDate
+
+      if (!isInReSubmissionWindow) {
+        return {
+          status: 'submission-closed',
+          pdfLink: null,
+        }
+      }
+    }
+
     const userSubmissionForPlan = userSubmissions.find(
-      (sub: any) => sub.subplan?.toString() === planId.toString()
+      (sub: any) => sub.subplan?.toString() === planId
     )
 
     return {
       status: userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress',
-      pdfLink: userSubmissionForPlan ? userSubmissionForPlan.pdfLink : null,
+      pdfLink: userSubmissionForPlan?.pdfLink || null,
     }
   }
 
-private getSubmissionStatus(
-  userSubmissions: any[],
-  plan: ISubmissionPlan
-): { status: string; pdfLink: string | null } {
-  const planId = plan._id.toString();
-  const currentDate = new Date();
+  private getEvaluatorStatus(
+    userSubmissions: any[],
+    plan: ISubmissionPlan
+  ): { status: string; pdfLink: string | null } {
+    const planId = plan._id.toString()
+    const currentDate = new Date()
 
-  const regularStart = plan.regularSubmissionStartDate
-    ? new Date(plan.regularSubmissionStartDate)
-    : null;
-  const regularEnd = plan.regularSubmissionEndDate
-    ? new Date(plan.regularSubmissionEndDate)
-    : null;
-  const reSubmitDate = plan.reSubmissionDate
-    ? new Date(plan.reSubmissionDate)
-    : null;
+    const evaluatorStart = plan.evaluationStartDate ? new Date(plan.evaluationStartDate) : null
+    const evaluatorEnd = plan.evaluationEndDate ? new Date(plan.evaluationEndDate) : null
+    const reSubmitDate = plan.reSubmissionDate ? new Date(plan.reSubmissionDate) : null
 
-  if (!regularStart || currentDate < regularStart) {
-    return {
-      status: 'not-started',
-      pdfLink: null,
-    };
-  }
-
-  // ✅ 2. Check if regular submission has ended
-  const hasRegularEnded = regularEnd && currentDate > regularEnd;
-  if (hasRegularEnded) {
-    const isInReSubmissionWindow =
-      reSubmitDate && currentDate <= reSubmitDate;
-
-    if (!isInReSubmissionWindow) {
+    if (!evaluatorStart || currentDate < evaluatorStart) {
       return {
-        status: 'submission-closed',
+        status: 'not-started',
         pdfLink: null,
-      };
+      }
+    }
+
+    const hasRegularEnded = evaluatorEnd && currentDate > evaluatorEnd
+    if (hasRegularEnded) {
+      const isInReSubmissionWindow = reSubmitDate && currentDate <= reSubmitDate
+
+      if (!isInReSubmissionWindow) {
+        return {
+          status: 'submission-closed',
+          pdfLink: null,
+        }
+      }
+    }
+
+    const userSubmissionForPlan = userSubmissions.find(
+      (sub: any) => sub.subplan?.toString() === planId
+    )
+
+    return {
+      status: userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress',
+      pdfLink: userSubmissionForPlan?.pdfLink || null,
     }
   }
-
-  const userSubmissionForPlan = userSubmissions.find(
-    (sub: any) => sub.subplan?.toString() === planId
-  );
-
-  return {
-    status: userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress',
-    pdfLink: userSubmissionForPlan?.pdfLink || null,
-  };
-}
-
 
   async getDashboard(
     userId: string,
     pagination: IPagination
   ): Promise<IServiceResponse<IDashboardPaginatedResponse>> {
     const { page = 1, limit = 10 } = pagination
+    const skip = (page - 1) * limit
 
-    const user = await User.findById(userId)
+    const user = await User.findById(userId).lean()
     if (!user) {
       return {
         success: false,
@@ -105,20 +126,24 @@ private getSubmissionStatus(
       }
     }
 
-    const skip = (page - 1) * limit
     const [plans, total] = await Promise.all([
       SubmissionPlan.find({}).sort({ createdAt: 1 }).skip(skip).limit(limit).lean(),
-      SubmissionPlan.countDocuments({}),
+      SubmissionPlan.countDocuments(),
     ])
 
-    // Process each plan using common function
     const processedPlans = plans.map((plan: ISubmissionPlan) => {
-      const { status, pdfLink } = this.getSubmissionStatus(user.submission || [], plan)
+      let statusInfo: { status: string; pdfLink: string | null }
+
+      if (user.role === 'evaluator') {
+        statusInfo = this.getEvaluatorStatus(user.submission || [], plan)
+      } else {
+        statusInfo = this.getSubmissionStatus(user.submission || [], plan)
+      }
 
       return {
         ...plan,
-        status,
-        pdfLink,
+        status: statusInfo.status,
+        pdfLink: statusInfo.pdfLink,
       }
     })
 
@@ -266,10 +291,7 @@ private getSubmissionStatus(
       }
     })
 
-    const { status: planStatus } = this.getSubmissionStatus(
-      user.submission || [],
-      planModel
-    )
+    const { status: planStatus } = this.getSubmissionStatus(user.submission || [], planModel)
 
     return {
       success: true,

@@ -38,51 +38,6 @@ class AdminService {
     return submission.status || SubmissionStatus.IN_PROGRESS
   }
 
-  private getSubmissionStatus(
-    userSubmissions: any[],
-    plan: ISubmissionPlan
-  ): { status: string; pdfLink: string | null } {
-    const planId = plan._id.toString()
-    const currentDate = new Date()
-
-    const regularStart = plan.regularSubmissionStartDate
-      ? new Date(plan.regularSubmissionStartDate)
-      : null
-    const regularEnd = plan.regularSubmissionEndDate
-      ? new Date(plan.regularSubmissionEndDate)
-      : null
-    const reSubmitDate = plan.reSubmissionDate ? new Date(plan.reSubmissionDate) : null
-
-    if (!regularStart || currentDate < regularStart) {
-      return {
-        status: 'not-started',
-        pdfLink: null,
-      }
-    }
-
-    // ✅ 2. Check if regular submission has ended
-    const hasRegularEnded = regularEnd && currentDate > regularEnd
-    if (hasRegularEnded) {
-      const isInReSubmissionWindow = reSubmitDate && currentDate <= reSubmitDate
-
-      if (!isInReSubmissionWindow) {
-        return {
-          status: 'submission-closed',
-          pdfLink: null,
-        }
-      }
-    }
-
-    const userSubmissionForPlan = userSubmissions.find(
-      (sub: any) => sub.subplan?.toString() === planId
-    )
-
-    return {
-      status: userSubmissionForPlan ? userSubmissionForPlan.status : 'in-progress',
-      pdfLink: userSubmissionForPlan?.pdfLink || null,
-    }
-  }
-
   async createInvitation(userData: IinvaiteRequest): Promise<IAuthResponse> {
     const { name, email, contact, code, redirectUrl } = userData
     const existingUser = await User.findOne({ code })
@@ -230,89 +185,85 @@ class AdminService {
     }
   }
 
-  // async getAllSubmission(
-  //   role: string = '',
-  //   pagination: IPagination,
-  //   fy: string = '',
-  //   search: string = ''
-  // ): Promise<IServiceResponse<IUserPaginatedResponse>> {
-  //   const { page = 1, limit = 10 } = pagination
-  //   const skip = (page - 1) * limit
+  async getAllSubmission(
+    role: string = '',
+    pagination: IPagination,
+    fy: string = '',
+    search: string = ''
+  ): Promise<IServiceResponse<IUserPaginatedResponse>> {
+    const { page = 1, limit = 10 } = pagination
+    const skip = (page - 1) * limit
 
-  //   // 1. Get all submission plans (no sorting)
-  //   const plans = await SubmissionPlan.find({})
+    const query: any = {}
 
-  //   const query: any = {}
+    if (fy) {
+      const fyPlan = await SubmissionPlan.findOne({ title: fy })
+      if (fyPlan) {
+        query.submission = {
+          $elemMatch: {
+            subplan: fyPlan._id,
+            status: { $ne: SubmissionStatus.DRAFT },
+          },
+        }
+      }
+    } else {
+      query.submission = {
+        $elemMatch: {
+          status: { $ne: SubmissionStatus.DRAFT },
+        },
+      }
+    }
 
-  //   // 2. Filter by financial year plan (FY)
-  //   if (fy) {
-  //     const fyPlan = await SubmissionPlan.findOne({ title: fy })
-  //     if (fyPlan) {
-  //       query.submission = {
-  //         $elemMatch: {
-  //           subplan: fyPlan._id,
-  //           status: { $ne: SubmissionStatus.DRAFT },
-  //         },
-  //       }
-  //     }
-  //   } else {
-  //     query.submission = {
-  //       $elemMatch: {
-  //         status: { $ne: SubmissionStatus.DRAFT },
-  //       },
-  //     }
-  //   }
+    // 3. Filter by role
+    if (role && role !== 'null') {
+      query.code = {
+        ...(role === 'evaluator' && { $regex: 'EVAL' }),
+        ...(role !== 'evaluator' && { $not: /EVAL/i }),
+      }
+    }
 
-  //   // 3. Filter by role
-  //   if (role && role !== 'null') {
-  //     query.code = {
-  //       ...(role === 'evaluator' && { $regex: 'EVAL' }),
-  //       ...(role !== 'evaluator' && { $not: /EVAL/i }),
-  //     }
-  //   }
+    // 4. Filter by search keyword
+    if (search?.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i')
+      query.$or = [{ name: { $regex: searchRegex } }]
+    }
 
-  //   // 4. Filter by search keyword
-  //   if (search?.trim()) {
-  //     const searchRegex = new RegExp(search.trim(), 'i')
-  //     query.$or = [{ name: { $regex: searchRegex } }]
-  //   }
+    // 5. Fetch users with submissions
+    const users = await User.find(query)
+      .populate({
+        path: 'submission.subplan',
+        model: 'SubmissionPlan',
+      })
+      .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+      .skip(skip)
+      .limit(limit)
 
-  //   // 5. Fetch users with submissions
-  //   const users = await User.find(query)
-  //     .populate({
-  //       path: 'submission.subplan',
-  //       model: 'SubmissionPlan',
-  //     })
-  //     .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
-  //     .skip(skip)
-  //     .limit(limit)
+    // 6. Remove draft submissions from each user
+    const filteredUsers = users
+      .map((user) => {
+        if (!Array.isArray(user.submission)) return user
+        user.submission = user.submission.filter(
+          (sub) => sub.status !== SubmissionStatus.DRAFT && sub.status !== 'draft'
+        )
+        return user
+      })
+      .filter((user) => Array.isArray(user.submission) && user.submission.length > 0)
 
-  //   // 6. Remove draft submissions from each user
-  //   const filteredUsers = users
-  //     .map((user) => {
-  //       if (!Array.isArray(user.submission)) return user
-  //       user.submission = user.submission.filter(
-  //         (sub) => sub.status !== SubmissionStatus.DRAFT && sub.status !== 'draft'
-  //       )
-  //       return user
-  //     })
-  //     .filter((user) => Array.isArray(user.submission) && user.submission.length > 0)
-
-  //   // 7. Prepare response
-  //   return {
-  //     success: true,
-  //     statusCode: statusCode.SUCCESS,
-  //     message: 'Submissions fetched successfully',
-  //     data: {
-  //       users: filteredUsers,
-  //       pagination: {
-  //         page,
-  //         limit,
-  //         total: filteredUsers.length,
-  //       },
-  //     },
-  //   }
-  // }
+    // 7. Prepare response
+    return {
+      success: true,
+      statusCode: statusCode.SUCCESS,
+      message: 'Submissions fetched successfully',
+      data: {
+        users: filteredUsers,
+        pagination: {
+          page,
+          limit,
+          total: filteredUsers.length,
+        },
+      },
+    }
+  }
 
   // async getPreviewSubmissions(planId: string, userId: string) {
   //   try {
@@ -473,107 +424,107 @@ class AdminService {
   //   }
   // }
 
-  async getAllSubmission(
-    role: string = '',
-    pagination: IPagination,
-    fy: string = '',
-    search: string = ''
-  ): Promise<IServiceResponse<IUserPaginatedResponse>> {
-    const { page = 1, limit = 10 } = pagination
-    const skip = (page - 1) * limit
+  // async getAllSubmission(
+  //   role: string = '',
+  //   pagination: IPagination,
+  //   fy: string = '',
+  //   search: string = ''
+  // ): Promise<IServiceResponse<IUserPaginatedResponse>> {
+  //   const { page = 1, limit = 10 } = pagination
+  //   const skip = (page - 1) * limit
 
-    const query: any = {
-      role: { $nin: ['admin', 'evaluator'] },
-    }
-    // 1. Filter by role (additional role filters)
-    if (role && role !== 'null') {
-      query.code = {
-        ...(role === 'evaluator' && { $regex: 'EVAL' }),
-        ...(role !== 'evaluator' && { $not: /EVAL/i }),
-      }
-    }
+  //   const query: any = {
+  //     role: { $nin: ['admin', ''] },
+  //   }
 
-    // 2. Filter by search
-    if (search?.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i')
-      query.$or = [{ name: { $regex: searchRegex } }]
-    }
+  //   if (role && role !== 'null') {
+  //     query.code = {
+  //       ...(role === 'evaluator' && { $regex: 'EVAL' }),
+  //       ...(role !== 'evaluator' && { $not: /EVAL/i }),
+  //     }
+  //   }
 
-    // 3. Get all plans (filtered by FY)
-    const planQuery: any = fy ? { title: fy } : {}
-    const plans = await SubmissionPlan.find(planQuery).lean()
+  //   // 2. Filter by search
+  //   if (search?.trim()) {
+  //     const searchRegex = new RegExp(search.trim(), 'i')
+  //     query.$or = [{ name: { $regex: searchRegex } }]
+  //   }
 
-    // 4. Get ALL users that match filters (no pagination yet)
-    const allUsers = await User.find(query)
-      .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
-      .sort('-updatedAt')
-      .lean()
+  //   // 3. Get all plans (filtered by FY)
+  //   const planQuery: any = fy ? { title: fy } : {}
+  //   const plans = await SubmissionPlan.find(planQuery).lean()
 
-    // 5. Process all users to create flattened submissions
-    const allSubmissions: Array<{
-      user: any
-      submissionData: any
-    }> = []
+  //   // 4. Get ALL users that match filters (no pagination yet)
+  //   const allUsers = await User.find(query)
+  //     .select('-password -resetPasswordToken -resetPasswordExpires -hashString')
+  //     .sort('-updatedAt')
+  //     .lean()
 
-    allUsers.forEach((user) => {
-      plans.forEach((plan) => {
-        const userSubmissionForPlan = (user.submission || []).find(
-          (s: any) => String(s?.subplan?._id || s?.subplan) === String(plan._id)
-        )
+  //   // 5. Process all users to create flattened submissions
+  //   const allSubmissions: Array<{
+  //     user: any
+  //     submissionData: any
+  //   }> = []
 
-        const { status, pdfLink } = this.getSubmissionStatus(user.submission || [], plan)
+  //   allUsers.forEach((user) => {
+  //     plans.forEach((plan) => {
+  //       const userSubmissionForPlan = (user.submission || []).find(
+  //         (s: any) => String(s?.subplan?._id || s?.subplan) === String(plan._id)
+  //       )
 
-        allSubmissions.push({
-          user: {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            code: user.code,
-            role: user.role ?? '',
-          },
-          submissionData: {
-            _id: userSubmissionForPlan?._id || undefined,
-            status,
-            submitted: userSubmissionForPlan?.submitted || false,
-            submissionDate: userSubmissionForPlan?.submissionDate || null,
-            subplan: plan,
-            pdfLink,
-          },
-        })
-      })
-    })
+  //       const { status, pdfLink } = this.getSubmissionStatus(user.submission || [], plan)
 
-    // 6. Apply pagination to the flattened submissions
-    const paginatedSubmissions = allSubmissions.slice(skip, skip + limit)
+  //       allSubmissions.push({
+  //         user: {
+  //           _id: user._id,
+  //           name: user.name,
+  //           email: user.email,
+  //           code: user.code,
+  //           role: user.role ?? '',
+  //         },
+  //         submissionData: {
+  //           _id: userSubmissionForPlan?._id || undefined,
+  //           status,
+  //           submitted: userSubmissionForPlan?.submitted || false,
+  //           submissionDate: userSubmissionForPlan?.submissionDate || null,
+  //           subplan: plan,
+  //           pdfLink,
+  //         },
+  //       })
+  //     })
+  //   })
 
-    // 7. Re-group by user for the response
-    const usersMap = new Map<string, any>()
+  //   // 6. Apply pagination to the flattened submissions
+  //   const paginatedSubmissions = allSubmissions.slice(skip, skip + limit)
 
-    paginatedSubmissions.forEach(({ user, submissionData }) => {
-      if (!usersMap.has(user._id)) {
-        usersMap.set(user._id, {
-          ...user,
-          submissions: [],
-        })
-      }
-      usersMap.get(user._id).submissions.push(submissionData)
-    })
+  //   // 7. Re-group by user for the response
+  //   const usersMap = new Map<string, any>()
 
-    // 8. Final Response
-    return {
-      success: true,
-      statusCode: statusCode.SUCCESS,
-      message: 'All user submissions grouped by plan fetched successfully',
-      data: {
-        users: Array.from(usersMap.values()),
-        pagination: {
-          page,
-          limit,
-          total: allSubmissions.length, // Total submissions count
-        },
-      },
-    }
-  }
+  //   paginatedSubmissions.forEach(({ user, submissionData }) => {
+  //     if (!usersMap.has(user._id)) {
+  //       usersMap.set(user._id, {
+  //         ...user,
+  //         submissions: [],
+  //       })
+  //     }
+  //     usersMap.get(user._id).submissions.push(submissionData)
+  //   })
+
+  //   // 8. Final Response
+  //   return {
+  //     success: true,
+  //     statusCode: statusCode.SUCCESS,
+  //     message: 'All user submissions grouped by plan fetched successfully',
+  //     data: {
+  //       users: Array.from(usersMap.values()),
+  //       pagination: {
+  //         page,
+  //         limit,
+  //         total: allSubmissions.length, // Total submissions count
+  //       },
+  //     },
+  //   }
+  // }
 
   // async getAllSubmission(
   //   role: string = '',
@@ -780,8 +731,8 @@ class AdminService {
         plan: {
           ...planModel,
         },
-        title: planModel.title,
         status: planStatus,
+        role: userRole,
       },
     }
   }
@@ -989,6 +940,8 @@ class AdminService {
       data: updatedUser,
     }
   }
+
+  
 }
 
 const adminService = new AdminService()

@@ -3,11 +3,9 @@ import SubmissionPlan from '../models/SubmissionPlan.models'
 
 export const submissionPlanSeedData = [
   {
-    _id: new mongoose.Types.ObjectId(),
     title: 'FY 2024-2026',
   },
   {
-    _id: new mongoose.Types.ObjectId(),
     title: 'FY 2027-2029',
   }
 ]
@@ -17,7 +15,7 @@ export async function seedSubmissionPlans() {
     // Use bulk operations for better performance
     const bulkOps = submissionPlanSeedData.map((plan) => ({
       updateOne: {
-        filter: { _id: plan._id },
+        filter: { title: plan.title },
         update: { $set: plan },
         upsert: true,
       },
